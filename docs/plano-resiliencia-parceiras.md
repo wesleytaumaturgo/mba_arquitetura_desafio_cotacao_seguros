@@ -257,7 +257,10 @@ func (c *QuoteCache) Set(ctx context.Context, key string, quote partner.Quote) e
 JSON e grava com `client.Set(ctx, key, payload, ttl)`. `Get` lê, desserializa e retorna `ok=false` em
 qualquer erro (chave ausente, JSON inválido, erro de rede), sem propagar o erro ao chamador (só loga).
 Para o teste de expiração, usar um TTL curto passado ao `NewQuoteCache` do teste (ex.: `50ms`) e
-`time.Sleep` só o suficiente para passar do TTL, nunca dependendo do TTL de produção (900s).
+`server.FastForward(ttl + margem)` do próprio `miniredis/v2` — **não** `time.Sleep` real: o `miniredis`
+modela TTL como duração decrementada explicitamente por `FastForward`, sem goroutine/ticker de relógio de
+parede (confirmado em T06 lendo `db.go` da lib instalada), então um `time.Sleep` real não expira a chave
+simulada e deixa o teste flaky/incorreto.
 
 **Critérios de aceite**
 - [ ] `Key("corretora-a", "partner-flaky", fingerprint)` tem o formato
