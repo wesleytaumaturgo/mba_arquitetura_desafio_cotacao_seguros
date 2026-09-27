@@ -611,7 +611,9 @@ smoke manual acima, e a confirmação definitiva vem da Fase 6 (`make reproduce`
 
 #### Fase 6: Evidências do depois
 
-##### T11: As 7 evidências da tabela do enunciado, em `docs/evidencias/depois/`
+##### T11: As 7 evidências da tabela do enunciado, em `docs/evidencias/depois/` — [CONCLUÍDA]
+
+> Executada manualmente, ver `docs/evidencias/depois/`.
 
 - **Complexidade**: M
 - **Estimativa**: 1,5 dia-dev

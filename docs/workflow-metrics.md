@@ -11,6 +11,7 @@ Preenchido pelo `/implement-plan` ao fim de cada execução e pelo humano ao fim
 
 | Task | Rodadas | Achados C/H/M/L | Parada humana (motivo) | Duração agente | Commit |
 |---|---|---|---|---|---|
+| T11 | N/A | N/A | execução manual (Docker + captura humana das 7 evidências; fora do loop implementador/revisor) | N/A | `04b1029` |
 
 ## 3. Escapes e falsos positivos (humano preenche quando descobrir)
 
