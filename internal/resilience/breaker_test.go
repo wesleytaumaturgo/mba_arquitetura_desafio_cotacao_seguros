@@ -2,8 +2,10 @@ package resilience
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -103,4 +105,75 @@ func TestBreakerOpensAfterFiveConsecutiveFailures(t *testing.T) {
 	if got := atomic.LoadInt32(&requests); got != 8 {
 		t.Fatalf("server received %d requests, want 8 after the closing probes", got)
 	}
+}
+
+// TestOnStateChangeFiresWithInitialStateThenOnEveryTransition proves the T09b contract:
+// Config.OnStateChange is optional (nil is a no-op, exercised implicitly by every other test in this
+// file), fires once right after NewBreaker with the initial StateClosed, and afterwards fires on every
+// transition gobreaker itself reports — this is the synchronous, cheap hook that
+// platform.PartnerBreakerGauge (T09b) hangs its last-known-state map from.
+func TestOnStateChangeFiresWithInitialStateThenOnEveryTransition(t *testing.T) {
+	type transition struct{ from, to gobreaker.State }
+	var (
+		mu   sync.Mutex
+		name string
+		seen []transition
+	)
+
+	onStateChange := func(n string, from, to gobreaker.State) {
+		mu.Lock()
+		defer mu.Unlock()
+		name = n
+		seen = append(seen, transition{from, to})
+	}
+
+	breaker := NewBreaker("partner-flaky", Config{
+		ConsecutiveFailures: 1,
+		OpenTimeout:         10 * time.Millisecond,
+		HalfOpenMaxRequests: 1,
+		OnStateChange:       onStateChange,
+	})
+
+	mu.Lock()
+	if name != "partner-flaky" {
+		t.Fatalf("OnStateChange name = %q right after NewBreaker, want partner-flaky", name)
+	}
+	if len(seen) != 1 || seen[0] != (transition{gobreaker.StateClosed, gobreaker.StateClosed}) {
+		t.Fatalf("OnStateChange calls right after NewBreaker = %v, want exactly one Closed->Closed", seen)
+	}
+	mu.Unlock()
+
+	ctx := context.Background()
+	if _, err := breaker.Execute(ctx, alwaysFailsForTest); err == nil {
+		t.Fatal("forcing the breaker open: expected an error")
+	}
+
+	mu.Lock()
+	if len(seen) != 2 || seen[1] != (transition{gobreaker.StateClosed, gobreaker.StateOpen}) {
+		t.Fatalf("OnStateChange calls after the tripping failure = %v, want a second Closed->Open", seen)
+	}
+	mu.Unlock()
+
+	// gobreaker/v2 não expõe relógio injetável; time.Sleep é necessário aqui para atravessar
+	// OpenTimeout e liberar a sonda de meio-aberto.
+	time.Sleep(20 * time.Millisecond)
+	if _, err := breaker.Execute(ctx, func() (partner.Quote, error) { return partner.Quote{}, nil }); err != nil {
+		t.Fatalf("half-open probe: expected success, got %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) != 4 {
+		t.Fatalf("OnStateChange calls after the successful probe = %v, want 4 (Closed->Open plus Open->HalfOpen plus HalfOpen->Closed)", seen)
+	}
+	if seen[2] != (transition{gobreaker.StateOpen, gobreaker.StateHalfOpen}) {
+		t.Fatalf("OnStateChange calls[2] = %v, want Open->HalfOpen", seen[2])
+	}
+	if seen[3] != (transition{gobreaker.StateHalfOpen, gobreaker.StateClosed}) {
+		t.Fatalf("OnStateChange calls[3] = %v, want HalfOpen->Closed", seen[3])
+	}
+}
+
+func alwaysFailsForTest() (partner.Quote, error) {
+	return partner.Quote{}, errors.New("boom")
 }

@@ -1,9 +1,13 @@
 package quotation
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -12,6 +16,9 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/sony/gobreaker/v2"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/cache"
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/partner"
@@ -549,4 +556,140 @@ func TestQuoteSkipsThePartnerWhenItsBreakerIsOpen(t *testing.T) {
 			t.Error("degraded is false with partner-flaky rejected by ErrTooManyRequests, expected true")
 		}
 	})
+}
+
+// newInMemoryTracer builds a *sdktrace.TracerProvider backed by an in-memory exporter, local to the
+// test, and returns both the exporter (to read the spans back) and a trace.Tracer to pass to
+// quotation.WithTracer. It deliberately does NOT call otel.SetTracerProvider: mutating the global
+// provider is not safe to rely on across repeated runs of the same test binary, because the OTel
+// SDK's global package only rewires an already-created Tracer to a new delegate once per process
+// (go.opentelemetry.io/otel/internal/global/state.go, delegateTraceOnce) — a second
+// otel.SetTracerProvider call in the same binary would silently leave any package-level
+// otel.Tracer(...) var pointed at the first provider. Injecting the Tracer via WithTracer avoids the
+// global entirely.
+func newInMemoryTracer(t *testing.T) (*tracetest.InMemoryExporter, trace.Tracer) {
+	t.Helper()
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	t.Cleanup(func() { _ = tp.Shutdown(context.Background()) })
+	return exporter, tp.Tracer("test")
+}
+
+// partnerQuoteResult finds the "partner.quote" span for partnerName (identified by the "partner.name"
+// attribute) and returns its "partner.result" attribute.
+func partnerQuoteResult(spans tracetest.SpanStubs, partnerName string) (string, bool) {
+	for _, span := range spans {
+		if span.Name != "partner.quote" {
+			continue
+		}
+		var gotPartner, result string
+		for _, kv := range span.Attributes {
+			switch kv.Key {
+			case "partner.name":
+				gotPartner = kv.Value.AsString()
+			case "partner.result":
+				result = kv.Value.AsString()
+			}
+		}
+		if gotPartner == partnerName {
+			return result, true
+		}
+	}
+	return "", false
+}
+
+// TestPartnerQuoteSpanCarriesResult is a critério de aceite of T09b (FDD seção 7): a cache hit must
+// carry partner.result="cache_hit" and an open breaker must carry partner.result="circuit_open" in
+// the partner.quote span, even though neither ever reaches the Quoter — otherwise a
+// circuit-shortened call looks like a mysteriously fast live quote in the trace.
+func TestPartnerQuoteSpanCarriesResult(t *testing.T) {
+	exporter, tracer := newInMemoryTracer(t)
+
+	_, quoteCache := newTestCache(t, time.Minute)
+	request := validRequest()
+	cached := partner.Quote{Partner: "partner-slow", QuoteID: "cached-slow", PremiumCents: 91234, Currency: "BRL"}
+	key := cache.Key("corretora-a", "partner-slow", request.Fingerprint())
+	if err := quoteCache.Set(context.Background(), key, cached); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+
+	breaker := resilience.NewBreaker("partner-flaky", resilience.Config{
+		ConsecutiveFailures: 1,
+		OpenTimeout:         time.Hour,
+		HalfOpenMaxRequests: 1,
+	})
+	if _, err := breaker.Execute(context.Background(), alwaysFails); err == nil {
+		t.Fatal("forcing the breaker open: expected an error from alwaysFails")
+	}
+	breakers := map[string]*resilience.Breaker{"partner-flaky": breaker}
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	if _, err := NewService(threePartners, quoter, quoteCache, breakers, WithTracer(tracer)).
+		Quote(context.Background(), "corretora-a", request); err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+
+	spans := exporter.GetSpans()
+	if result, ok := partnerQuoteResult(spans, "partner-slow"); !ok || result != "cache_hit" {
+		t.Fatalf("partner.result for partner-slow = (%q, ok=%v), want (cache_hit, true)", result, ok)
+	}
+	if result, ok := partnerQuoteResult(spans, "partner-flaky"); !ok || result != "circuit_open" {
+		t.Fatalf("partner.result for partner-flaky = (%q, ok=%v), want (circuit_open, true)", result, ok)
+	}
+	if result, ok := partnerQuoteResult(spans, "partner-degrading"); !ok || result != "live_success" {
+		t.Fatalf("partner.result for partner-degrading = (%q, ok=%v), want (live_success, true)", result, ok)
+	}
+}
+
+// TestPartnerQuoteLogHasNoPersonalData is the teste que prova required by T09b (FDD seção 7): the
+// structured, per-partner log line must never carry the driver's document (CPF), the vehicle's
+// plate/model/year or a quote_id — this test deliberately sends real-looking personal data and a
+// breaker-open partner, then greps the captured log output for every forbidden value.
+func TestPartnerQuoteLogHasNoPersonalData(t *testing.T) {
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	request := Request{
+		Driver:  Driver{Document: "39053344705", BirthYear: 1988},
+		Vehicle: Vehicle{Plate: "BRA2E19", Model: "Civic Turbo", Year: 2021, ValueCents: 9200000},
+	}
+	if err := request.Normalize(); err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+
+	breaker := resilience.NewBreaker("partner-degrading", resilience.Config{
+		ConsecutiveFailures: 1,
+		OpenTimeout:         time.Hour,
+		HalfOpenMaxRequests: 1,
+	})
+	if _, err := breaker.Execute(context.Background(), alwaysFails); err == nil {
+		t.Fatal("forcing the breaker open: expected an error from alwaysFails")
+	}
+	breakers := map[string]*resilience.Breaker{"partner-degrading": breaker}
+
+	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
+	if _, err := NewService(threePartners, quoter, nil, breakers).
+		Quote(context.Background(), "corretora-a", request); err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+
+	logOutput := buf.String()
+	if logOutput == "" {
+		t.Fatal("no log output captured; the per-partner log line is not being written")
+	}
+
+	forbidden := []string{
+		request.Driver.Document,
+		request.Vehicle.Plate,
+		request.Vehicle.Model,
+		strconv.Itoa(request.Vehicle.Year),
+		"quote_id",
+	}
+	for _, needle := range forbidden {
+		if strings.Contains(logOutput, needle) {
+			t.Fatalf("log output contains forbidden value %q:\n%s", needle, logOutput)
+		}
+	}
 }

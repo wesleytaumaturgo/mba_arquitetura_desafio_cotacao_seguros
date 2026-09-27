@@ -20,6 +20,12 @@ type Config struct {
 	// HalfOpenMaxRequests is how many consecutive successful probes in the half-open state are
 	// required to close the breaker again.
 	HalfOpenMaxRequests uint32
+	// OnStateChange is an optional, cheap, synchronous hook invoked every time the breaker's state
+	// changes (including once, right after NewBreaker, with the initial StateClosed, so a consumer
+	// like the platform.PartnerBreakerGauge has a value before the first failure). nil is a no-op
+	// (T09b, FDD seção 7): the gauge itself is reported to the collector only at collection time, via
+	// RegisterCallback, never from this hook directly.
+	OnStateChange func(name string, from, to gobreaker.State)
 }
 
 // Breaker wraps a gobreaker.CircuitBreaker[partner.Quote] for a single partner.
@@ -36,8 +42,15 @@ func NewBreaker(name string, cfg Config) *Breaker {
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
 			return counts.ConsecutiveFailures >= cfg.ConsecutiveFailures
 		},
+		OnStateChange: cfg.OnStateChange,
 	}
-	return &Breaker{cb: gobreaker.NewCircuitBreaker[partner.Quote](settings)}
+	breaker := &Breaker{cb: gobreaker.NewCircuitBreaker[partner.Quote](settings)}
+
+	if cfg.OnStateChange != nil {
+		cfg.OnStateChange(name, gobreaker.StateClosed, gobreaker.StateClosed)
+	}
+
+	return breaker
 }
 
 // Execute runs fn through the breaker. It returns gobreaker.ErrOpenState (or ErrTooManyRequests) without
