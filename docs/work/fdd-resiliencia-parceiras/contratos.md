@@ -69,8 +69,8 @@ func NewClient(timeout time.Duration) *Client
 ## Métricas, logs e spans citados (seção 7)
 
 - `partner_breaker_state{partner=...}` (proposta): gauge, `0` fechado, `1` meio aberto, `2` aberto.
-- `quotation_cache_result_total{result="hit"|"miss"}` (proposta): contador; falha do Redis também soma a
-  `miss`, com log de aviso separado.
+- `quotation_cache_result_total{result="hit"|"miss"|"redis_error"}` (proposta): contador; `redis_error`
+  distingue falha de conexão de um miss real (mesma distinção do campo de log `cache_result`).
 - `http_server_request_duration_seconds`, `http_client_request_duration_seconds{server_address=...}`: já
   existentes, inalteradas.
 - Span `partner.quote`, atributo `partner.result`: `cache_hit`, `live_success`, `circuit_open`,

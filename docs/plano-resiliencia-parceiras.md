@@ -767,7 +767,6 @@ do zero, não edita um placeholder.
 | Esquecer de popular o mapa de breakers para alguma das três parceiras em `main.go`, deixando-a sem proteção silenciosamente | baixa | uma parceira roda sem circuit breaker em produção sem erro visível | T10 constrói o mapa iterando `cfg.Partners`, nunca uma lista hardcoded separada; T11 (evidência) expõe isso se o breaker nunca abrir sob carga | T10 |
 | Números de `make reproduce`/Jaeger variam entre execuções por causa do jitter dos mocks | baixa | comparação antes/depois com ruído | rodar duas vezes (sempre com `make down` antes) e usar a execução representativa, mesma prática de `docs/evidencias/antes/` | T11 |
 | Captura de p95 "antes" (evidência 7) nunca foi feita, e não dá para refazer depois que o código mudar | média | a evidência 7 fica incompleta, sem comparação válida na mesma escala | verificar isso **antes** da Fase 1 (pré-requisito no topo do plano), não em T11 | T11 |
-| Contador de cache com rótulo `redis_error` refina o FDD (seção 7 original só tinha `hit`/`miss`) sem atualizar o documento | baixa | SAD/FDD e código divergem no nome dos rótulos de uma métrica | atualizar `docs/fdd-resiliencia-parceiras.md` seção 7 (e o extrato em `docs/work/`) se o time confirmar o terceiro rótulo como definitivo | T09b |
 
 ---
 

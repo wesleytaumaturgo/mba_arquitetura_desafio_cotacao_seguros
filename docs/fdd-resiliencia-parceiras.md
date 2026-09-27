@@ -345,9 +345,9 @@ que as três parceiras faltam.
 **Métricas**
 - `partner_breaker_state{partner=...}` (proposta): gauge, `0` fechado, `1` meio aberto, `2` aberto; emitida
   a cada transição de estado do `gobreaker/v2` (callback `OnStateChange`).
-- `quotation_cache_result_total{result="hit"|"miss"}` (proposta): contador, incrementado em todo
-  `QuoteCache.Get`, independentemente de o miss ser real ou por falha do Redis (falha do Redis também soma
-  a `miss`, com um log de aviso separado para distinguir os dois casos em texto).
+- `quotation_cache_result_total{result="hit"|"miss"|"redis_error"}` (proposta): contador, incrementado em
+  todo `QuoteCache.Get`, com `redis_error` distinguindo falha de conexão de um miss real (mesma
+  distinção do campo de log `cache_result`, abaixo).
 - `http_server_request_duration_seconds`: já existe, inalterada.
 - `http_client_request_duration_seconds{server_address=...}`: já existe, inalterada, agora também reflete
   o timeout de 2000 ms nas chamadas que estouram.

@@ -60,7 +60,6 @@
 | Mapa de breakers não populado para as três parceiras em `main.go` | T10 | construir o mapa iterando `cfg.Partners`, nunca lista hardcoded |
 | Números de `make reproduce`/Jaeger variam entre execuções | T11 | rodar duas vezes (sempre com `make down` antes), usar a execução representativa |
 | Captura de p95 "antes" nunca foi feita e não dá para refazer depois que o código mudar | T11 | verificar isso antes da Fase 1 (pré-requisito no topo do plano), não em T11 |
-| Contador de cache com rótulo `redis_error` refina o FDD sem atualizar o documento | T09b | atualizar `docs/fdd-resiliencia-parceiras.md` seção 7 se o time confirmar o terceiro rótulo |
 
 ## Telemetria de negócio (T09b), decisões que não estão no FDD
 
