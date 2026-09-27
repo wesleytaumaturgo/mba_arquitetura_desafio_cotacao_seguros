@@ -78,6 +78,48 @@ func TestQuoteAggregatesTheThreePartnersSortedByPremium(t *testing.T) {
 	if response.TenantID != "corretora-a" {
 		t.Errorf("tenant_id %q, expected corretora-a", response.TenantID)
 	}
+	if response.Degraded {
+		t.Error("degraded is true with all three partners succeeding, expected false")
+	}
+	if len(response.MissingPartners) != 0 {
+		t.Errorf("missing_partners %v, expected none", response.MissingPartners)
+	}
+	for _, quote := range response.Quotes {
+		if quote.Source != "live" {
+			t.Errorf("quote from %q has source %q, expected live", quote.Partner, quote.Source)
+		}
+		if quote.AgeSeconds != nil {
+			t.Errorf("quote from %q has age_seconds %v, expected nil for a live quote", quote.Partner, *quote.AgeSeconds)
+		}
+	}
+
+	body := serialize(t, response)
+	var decoded map[string]any
+	if err := json.Unmarshal([]byte(body), &decoded); err != nil {
+		t.Fatalf("response is not JSON: %v", err)
+	}
+	if _, ok := decoded["missing_partners"]; ok {
+		t.Errorf("missing_partners present in JSON with no missing partners: %s", body)
+	}
+	if degraded, ok := decoded["degraded"]; !ok || degraded != false {
+		t.Errorf("degraded absent or not false in JSON: %s", body)
+	}
+	quoteBodies, ok := decoded["quotes"].([]any)
+	if !ok || len(quoteBodies) != 3 {
+		t.Fatalf("quotes not decoded as expected: %s", body)
+	}
+	for _, q := range quoteBodies {
+		quote, ok := q.(map[string]any)
+		if !ok {
+			t.Fatalf("quote is not an object: %v", q)
+		}
+		if _, ok := quote["age_seconds"]; ok {
+			t.Errorf("age_seconds present in JSON for a live quote: %s", body)
+		}
+		if quote["source"] != "live" {
+			t.Errorf("source %v in JSON, expected live: %s", quote["source"], body)
+		}
+	}
 }
 
 func TestQuoteCallsThePartnersSerially(t *testing.T) {

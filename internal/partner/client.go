@@ -19,6 +19,8 @@ type Quote struct {
 	Currency        string `json:"currency"`
 	CoverageCents   int64  `json:"coverage_cents"`
 	ValidForSeconds int64  `json:"valid_for_seconds"`
+	Source          string `json:"source"`
+	AgeSeconds      *int64 `json:"age_seconds,omitempty"`
 }
 
 type Client struct {

@@ -32,6 +32,7 @@ func (s *Service) Quote(ctx context.Context, tenant string, request Request) (Re
 		if err != nil {
 			return Response{}, err
 		}
+		quote.Source = "live"
 		quotes = append(quotes, quote)
 	}
 
