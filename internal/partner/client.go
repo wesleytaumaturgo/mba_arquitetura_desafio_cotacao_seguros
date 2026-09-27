@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform"
 )
@@ -24,8 +25,11 @@ type Client struct {
 	http *http.Client
 }
 
-func NewClient() *Client {
-	return &Client{http: &http.Client{Transport: platform.InstrumentTransport(http.DefaultTransport)}}
+func NewClient(timeout time.Duration) *Client {
+	return &Client{http: &http.Client{
+		Timeout:   timeout,
+		Transport: platform.InstrumentTransport(http.DefaultTransport),
+	}}
 }
 
 const responseLimit = 1 << 20

@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform"
 )
+
+const testClientTimeout = time.Second
 
 func testPartner(h http.Handler) (platform.Partner, func()) {
 	server := httptest.NewServer(h)
@@ -32,7 +35,7 @@ func TestQuoteReadsThePartnerResponse(t *testing.T) {
 	}))
 	defer closeServer()
 
-	quote, err := NewClient().Quote(context.Background(), p, map[string]string{"broker": "corretora-a"})
+	quote, err := NewClient(testClientTimeout).Quote(context.Background(), p, map[string]string{"broker": "corretora-a"})
 	if err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
@@ -60,7 +63,7 @@ func TestQuoteIdentifiesThePartnerThatFailed(t *testing.T) {
 	}))
 	defer closeServer()
 
-	_, err := NewClient().Quote(context.Background(), p, map[string]string{})
+	_, err := NewClient(testClientTimeout).Quote(context.Background(), p, map[string]string{})
 	if err == nil {
 		t.Fatal("a 503 from the partner was treated as success")
 	}
@@ -80,7 +83,7 @@ func TestQuoteFailsOnUnreadableResponse(t *testing.T) {
 	}))
 	defer closeServer()
 
-	if _, err := NewClient().Quote(context.Background(), p, map[string]string{}); err == nil {
+	if _, err := NewClient(testClientTimeout).Quote(context.Background(), p, map[string]string{}); err == nil {
 		t.Fatal("unreadable response was accepted")
 	}
 }
@@ -94,7 +97,22 @@ func TestQuoteHonoursCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if _, err := NewClient().Quote(ctx, p, map[string]string{}); err == nil {
+	if _, err := NewClient(testClientTimeout).Quote(ctx, p, map[string]string{}); err == nil {
 		t.Fatal("cancelled context did not interrupt the call")
+	}
+}
+
+func TestQuoteFailsWhenThePartnerIsSlowerThanTheTimeout(t *testing.T) {
+	p, closeServer := testPartner(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"partner":"ignored","quote_id":"q-1","premium_cents":123456,` +
+			`"currency":"BRL","coverage_cents":5000000,"valid_for_seconds":300}`))
+	}))
+	defer closeServer()
+
+	_, err := NewClient(20 * time.Millisecond).Quote(context.Background(), p, map[string]string{})
+	if err == nil {
+		t.Fatal("a response slower than the configured timeout was treated as success")
 	}
 }
