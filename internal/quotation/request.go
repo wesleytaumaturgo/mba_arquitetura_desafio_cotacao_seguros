@@ -56,6 +56,13 @@ func (r *Request) Normalize() error {
 	return nil
 }
 
+// Fingerprint identifies the normalized request for cache-key purposes; call it after Normalize().
+func (r Request) Fingerprint() string {
+	return fmt.Sprintf("%s|%d|%s|%s|%d|%d|%s",
+		r.Driver.Document, r.Driver.BirthYear, r.Vehicle.Plate, r.Vehicle.Model,
+		r.Vehicle.Year, r.Vehicle.ValueCents, r.Coverage)
+}
+
 type partnerRequest struct {
 	Broker string `json:"broker"`
 	Request
