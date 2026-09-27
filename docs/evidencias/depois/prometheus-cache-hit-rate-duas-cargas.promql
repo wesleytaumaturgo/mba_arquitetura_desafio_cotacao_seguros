@@ -1,0 +1,1 @@
+sum(rate(quotation_cache_result_total{result="hit"}[5m])) / sum(rate(quotation_cache_result_total{result=~"hit|miss"}[5m]))  # janela: Last 30m, step 5s; duas cargas: make reproduce (cache) e make load -distinct 500 (sem cache)

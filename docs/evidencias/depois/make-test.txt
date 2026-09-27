@@ -1,0 +1,9 @@
+go test ./...
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/cmd/loadgen	(cached)
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/cmd/partner-mock	(cached)
+?   	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/cmd/quotation-api	[no test files]
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/cache	(cached)
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/partner	(cached)
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform	(cached)
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/quotation	(cached)
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/resilience	(cached)

@@ -1,0 +1,1 @@
+partner_breaker_state{partner="partner-flaky"}  # janela: Last 30m, step 5s; duas cargas: make reproduce (cache) e make load -distinct 500 (sem cache)

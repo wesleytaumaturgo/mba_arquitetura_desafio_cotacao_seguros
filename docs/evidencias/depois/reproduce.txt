@@ -1,0 +1,380 @@
+docker compose up -d --build --wait
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Sending build context to Docker daemon  796.4kB
+Sending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> ae84d6b4de6d
+Step 7/13 : ARG CMD=quotation-api
+ ---> 77c7321f5931
+Step 7/13 : ARG CMD=quotation-api
+ ---> Running in 2a0b4276d17a
+ ---> Running in 938ce4c9a3db
+ ---> Running in 70565c59e376
+ ---> Removed intermediate container 2a0b4276d17a
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Removed intermediate container 938ce4c9a3db
+ ---> 3e1ef5f28927
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Removed intermediate container 70565c59e376
+ ---> 641ccd9c3d95
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Running in 555622d159b6
+ ---> Running in b017ae195336
+ ---> Running in 2a090d36cd7d
+ ---> Removed intermediate container 2a090d36cd7d
+ ---> 3bf5b78068f0
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Removed intermediate container b017ae195336
+ ---> e19fe0ff08c2
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> Using cache
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-degrading:latest
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-flaky:latest
+ ---> Removed intermediate container 555622d159b6
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-slow:latest
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Running in 6d1603074caa
+ ---> Removed intermediate container 6d1603074caa
+ ---> 1d4f4996f9b9
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 7561af078bdd
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 546adfc65509
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 60f91a3ba2e5
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 6338bdcafcc3
+Successfully built 6338bdcafcc3
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-quotation-api:latest
+make load
+make[1]: Entrando no diretório '/home/wesley/Github/MBA/LAB/forks/mba_arquitetura_desafio_cotacao_seguros'
+docker compose run --rm --build loadgen 
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Sending build context to Docker daemon  796.4kB
+Sending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+Step 1/13 : ARG GO_VERSION=1.25
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /srcStep 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> Using cache
+ ---> 07d6e65bb14b
+ ---> 682a18eed9e3
+Step 3/13 : WORKDIR /srcStep 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 682a18eed9e3
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+Step 4/13 : COPY go.mod go.sum ./ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> Using cache
+ ---> Using cache
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-slow:latest
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-flaky:latest
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-degrading:latest
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 1d4f4996f9b9
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 7561af078bdd
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 546adfc65509
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 60f91a3ba2e5
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 6338bdcafcc3
+Successfully built 6338bdcafcc3
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-quotation-api:latest
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Running in b9e9504fc4b3
+ ---> Removed intermediate container b9e9504fc4b3
+ ---> 58ebe09626b5
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> ddd9b3b0019e
+Step 11/13 : EXPOSE 8080
+ ---> Running in b8a7cd2c4249
+ ---> Removed intermediate container b8a7cd2c4249
+ ---> fa29acc5d53e
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Running in 9e210a9bf2c9
+ ---> Removed intermediate container 9e210a9bf2c9
+ ---> 0d047d244bec
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Running in 4c4362b746b5
+ ---> Removed intermediate container 4c4362b746b5
+ ---> 4a9b6a581d9b
+Successfully built 4a9b6a581d9b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-loadgen:latest
+baseline: 10 requests, one at a time...
+load: 200 requests, 50 at a time...
+
+loadgen · http://quotation-api:8080/quotes · tenant corretora-a · 5 distinct quotes
+
+baseline — 10 requests, 1 in flight, 22:39:28 UTC to 22:39:38 UTC
+  success        10 of 10 (100%)
+  latency        p50 198ms   p95 2.04s   p99 2.04s   max 2.04s
+  throughput     1.0 req/s in 10.01s
+
+load — 200 requests, 50 in flight, 22:39:38 UTC to 22:39:38 UTC
+  success        200 of 200 (100%)
+  latency        p50 9ms   p95 204ms   p99 229ms   max 240ms
+  throughput     744.2 req/s in 268ms
+
+baseline → load
+  p95 latency    2.04s → 204ms   0.1x
+  max latency    2.04s → 240ms   0.1x
+  success        100% → 100%
+  throughput     1.0 → 744.2 req/s
+
+where to look
+  Jaeger         http://localhost:16686 · service quotation-api · operation POST /quotes
+  load window    22:39:38 UTC to 22:39:38 UTC (sort by longest first)
+  step by step   docs/roteiro-cenario-de-falha.md
+
+make[1]: Saindo do diretório '/home/wesley/Github/MBA/LAB/forks/mba_arquitetura_desafio_cotacao_seguros'

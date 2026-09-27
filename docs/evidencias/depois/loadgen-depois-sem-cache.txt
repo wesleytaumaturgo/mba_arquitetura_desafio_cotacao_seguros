@@ -1,0 +1,217 @@
+docker compose run --rm --build loadgen -distinct 500
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Sending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+Sending build context to Docker daemon  796.4kB
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> Using cache
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> d8e65448a300
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-degrading:latest
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-flaky:latest
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-slow:latest
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 1d4f4996f9b9
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 7561af078bdd
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 546adfc65509
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 60f91a3ba2e5
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 6338bdcafcc3
+Successfully built 6338bdcafcc3
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-quotation-api:latest
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  796.4kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 774f26811749
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> c61452e2f596
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 743d480890b0
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> f76852829dcd
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 58ebe09626b5
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> ddd9b3b0019e
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> fa29acc5d53e
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 0d047d244bec
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 4a9b6a581d9b
+Successfully built 4a9b6a581d9b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-loadgen:latest
+baseline: 10 requests, one at a time...
+load: 200 requests, 50 at a time...
+
+loadgen · http://quotation-api:8080/quotes · tenant corretora-a · 500 distinct quotes
+
+baseline — 10 requests, 1 in flight, 22:41:43 UTC to 22:41:52 UTC
+  success        10 of 10 (100%)
+  latency        p50 3ms   p95 2.01s   p99 2.01s   max 2.01s
+  throughput     1.1 req/s in 9.45s
+
+load — 200 requests, 50 in flight, 22:41:52 UTC to 22:42:01 UTC
+  success        200 of 200 (100%)
+  latency        p50 1.64s   p95 3.68s   p99 3.71s   max 3.71s
+  throughput     22.9 req/s in 8.72s
+
+baseline → load
+  p95 latency    2.01s → 3.68s   1.8x
+  max latency    2.01s → 3.71s   1.8x
+  success        100% → 100%
+  throughput     1.1 → 22.9 req/s
+
+where to look
+  Jaeger         http://localhost:16686 · service quotation-api · operation POST /quotes
+  load window    22:41:52 UTC to 22:42:01 UTC (sort by longest first)
+  step by step   docs/roteiro-cenario-de-falha.md
+

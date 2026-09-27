@@ -1,0 +1,262 @@
+{
+ "data": [
+  {
+   "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+   "spans": [
+    {
+     "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+     "spanID": "7c780fdba2252f5c",
+     "operationName": "POST /quotes",
+     "references": [],
+     "startTime": 1790548778664708,
+     "duration": 5981,
+     "tags": [
+      {
+       "key": "client.address",
+       "type": "string",
+       "value": "192.168.240.10"
+      },
+      {
+       "key": "http.request.body.size",
+       "type": "int64",
+       "value": 164
+      },
+      {
+       "key": "http.request.method",
+       "type": "string",
+       "value": "POST"
+      },
+      {
+       "key": "http.response.body.size",
+       "type": "int64",
+       "value": 658
+      },
+      {
+       "key": "http.response.status_code",
+       "type": "int64",
+       "value": 200
+      },
+      {
+       "key": "internal.span.format",
+       "type": "string",
+       "value": "otlp"
+      },
+      {
+       "key": "network.peer.address",
+       "type": "string",
+       "value": "192.168.240.10"
+      },
+      {
+       "key": "network.peer.port",
+       "type": "int64",
+       "value": 50272
+      },
+      {
+       "key": "network.protocol.version",
+       "type": "string",
+       "value": "1.1"
+      },
+      {
+       "key": "otel.scope.name",
+       "type": "string",
+       "value": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+      },
+      {
+       "key": "otel.scope.version",
+       "type": "string",
+       "value": "0.69.0"
+      },
+      {
+       "key": "server.address",
+       "type": "string",
+       "value": "quotation-api"
+      },
+      {
+       "key": "server.port",
+       "type": "int64",
+       "value": 8080
+      },
+      {
+       "key": "span.kind",
+       "type": "string",
+       "value": "server"
+      },
+      {
+       "key": "url.path",
+       "type": "string",
+       "value": "/quotes"
+      },
+      {
+       "key": "url.scheme",
+       "type": "string",
+       "value": "http"
+      },
+      {
+       "key": "user_agent.original",
+       "type": "string",
+       "value": "Go-http-client/1.1"
+      }
+     ],
+     "logs": [],
+     "processID": "p1",
+     "warnings": null
+    },
+    {
+     "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+     "spanID": "66f8e4478cde0798",
+     "operationName": "partner.quote",
+     "references": [
+      {
+       "refType": "CHILD_OF",
+       "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+       "spanID": "7c780fdba2252f5c"
+      }
+     ],
+     "startTime": 1790548778666600,
+     "duration": 3257,
+     "tags": [
+      {
+       "key": "internal.span.format",
+       "type": "string",
+       "value": "otlp"
+      },
+      {
+       "key": "otel.scope.name",
+       "type": "string",
+       "value": "quotation-api"
+      },
+      {
+       "key": "partner.name",
+       "type": "string",
+       "value": "partner-flaky"
+      },
+      {
+       "key": "partner.result",
+       "type": "string",
+       "value": "cache_hit"
+      },
+      {
+       "key": "span.kind",
+       "type": "string",
+       "value": "internal"
+      }
+     ],
+     "logs": [],
+     "processID": "p1",
+     "warnings": null
+    },
+    {
+     "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+     "spanID": "165f4ae8c4574402",
+     "operationName": "partner.quote",
+     "references": [
+      {
+       "refType": "CHILD_OF",
+       "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+       "spanID": "7c780fdba2252f5c"
+      }
+     ],
+     "startTime": 1790548778669863,
+     "duration": 736,
+     "tags": [
+      {
+       "key": "internal.span.format",
+       "type": "string",
+       "value": "otlp"
+      },
+      {
+       "key": "otel.scope.name",
+       "type": "string",
+       "value": "quotation-api"
+      },
+      {
+       "key": "partner.name",
+       "type": "string",
+       "value": "partner-degrading"
+      },
+      {
+       "key": "partner.result",
+       "type": "string",
+       "value": "cache_hit"
+      },
+      {
+       "key": "span.kind",
+       "type": "string",
+       "value": "internal"
+      }
+     ],
+     "logs": [],
+     "processID": "p1",
+     "warnings": null
+    },
+    {
+     "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+     "spanID": "66f80e26f53f1649",
+     "operationName": "partner.quote",
+     "references": [
+      {
+       "refType": "CHILD_OF",
+       "traceID": "fc22e45f64aec656d2cf4cf73ff5fd7b",
+       "spanID": "7c780fdba2252f5c"
+      }
+     ],
+     "startTime": 1790548778664822,
+     "duration": 1771,
+     "tags": [
+      {
+       "key": "internal.span.format",
+       "type": "string",
+       "value": "otlp"
+      },
+      {
+       "key": "otel.scope.name",
+       "type": "string",
+       "value": "quotation-api"
+      },
+      {
+       "key": "partner.name",
+       "type": "string",
+       "value": "partner-slow"
+      },
+      {
+       "key": "partner.result",
+       "type": "string",
+       "value": "cache_hit"
+      },
+      {
+       "key": "span.kind",
+       "type": "string",
+       "value": "internal"
+      }
+     ],
+     "logs": [],
+     "processID": "p1",
+     "warnings": null
+    }
+   ],
+   "processes": {
+    "p1": {
+     "serviceName": "quotation-api",
+     "tags": [
+      {
+       "key": "telemetry.sdk.language",
+       "type": "string",
+       "value": "go"
+      },
+      {
+       "key": "telemetry.sdk.name",
+       "type": "string",
+       "value": "opentelemetry"
+      },
+      {
+       "key": "telemetry.sdk.version",
+       "type": "string",
+       "value": "1.44.0"
+      }
+     ]
+    }
+   },
+   "warnings": null
+  }
+ ]
+}

@@ -1,0 +1,1 @@
+histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))  # janela: Last 30m, step 5s; duas cargas: make reproduce (cache) e make load -distinct 500 (sem cache)
