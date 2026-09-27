@@ -6,8 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform"
 )
 
 const validBody = `{
@@ -92,20 +90,61 @@ func TestQuotesRejectsInvalidBody(t *testing.T) {
 	}
 }
 
-func TestQuotesResponds502WithTheNameOfThePartnerThatWentDown(t *testing.T) {
-	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: "partner-flaky"}
+func TestQuotesRespondsWithAPartialResponseWhenOnePartnerIsDown(t *testing.T) {
+	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
 	response := postQuotes(testAPI(quoter), "corretora-a", validBody)
 
-	if response.Code != http.StatusBadGateway {
-		t.Fatalf("status %d, expected 502", response.Code)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status %d, expected 200: %s", response.Code, response.Body)
 	}
 
-	var body platform.ErrorBody
+	var body Response
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unreadable response: %v", err)
+	}
+	if !body.Degraded {
+		t.Error("degraded is false with one partner down, expected true")
+	}
+	if got := body.MissingPartners; len(got) != 1 || got[0] != "partner-flaky" {
+		t.Errorf("missing_partners %v, expected [partner-flaky]", got)
+	}
+	if len(body.Quotes) != 2 {
+		t.Fatalf("%d quotes, expected 2", len(body.Quotes))
+	}
+	for i := 1; i < len(body.Quotes); i++ {
+		if body.Quotes[i-1].PremiumCents > body.Quotes[i].PremiumCents {
+			t.Errorf("quotes not sorted by premium_cents: %+v", body.Quotes)
+		}
+	}
+}
+
+func TestQuotesResponds503WhenNoPartnerRespond(t *testing.T) {
+	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
+	response := postQuotes(testAPI(quoter), "corretora-a", validBody)
+
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status %d, expected 503: %s", response.Code, response.Body)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
 		t.Fatalf("unreadable error: %v", err)
 	}
-	if body.Partner != "partner-flaky" {
-		t.Errorf("partner blamed %q, expected partner-flaky", body.Partner)
+	if decoded["error"] != "no partner quote available" {
+		t.Errorf("error %v, expected %q", decoded["error"], "no partner quote available")
+	}
+	if decoded["tenant_id"] != "corretora-a" {
+		t.Errorf("tenant_id %v, expected corretora-a", decoded["tenant_id"])
+	}
+	missing, ok := decoded["missing_partners"].([]any)
+	if !ok || len(missing) != 3 {
+		t.Fatalf("missing_partners %v, expected the three partners", decoded["missing_partners"])
+	}
+	expected := []string{"partner-slow", "partner-flaky", "partner-degrading"}
+	for i, name := range expected {
+		if missing[i] != name {
+			t.Errorf("missing_partners[%d] %v, expected %q", i, missing[i], name)
+		}
 	}
 }
 

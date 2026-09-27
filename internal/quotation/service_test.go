@@ -3,7 +3,6 @@ package quotation
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -32,11 +31,19 @@ func validRequest() Request {
 type fakeQuoter struct {
 	delay      time.Duration
 	premiums   map[string]int64
-	failOn     string
+	failOn     map[string]bool
 	calls      []string
 	requests   []any
 	concurrent atomic.Int32
 	peak       atomic.Int32
+}
+
+func failing(partners ...string) map[string]bool {
+	failOn := make(map[string]bool, len(partners))
+	for _, p := range partners {
+		failOn[p] = true
+	}
+	return failOn
 }
 
 func (f *fakeQuoter) Quote(_ context.Context, p platform.Partner, request any) (partner.Quote, error) {
@@ -49,7 +56,7 @@ func (f *fakeQuoter) Quote(_ context.Context, p platform.Partner, request any) (
 	f.requests = append(f.requests, request)
 	time.Sleep(f.delay)
 
-	if p.Name == f.failOn {
+	if f.failOn[p.Name] {
 		return partner.Quote{}, &partner.Error{Partner: p.Name, Status: 503, Reason: "partner answered 503"}
 	}
 	return partner.Quote{Partner: p.Name, PremiumCents: f.premiums[p.Name], Currency: "BRL"}, nil
@@ -139,21 +146,57 @@ func TestQuoteCallsThePartnersSerially(t *testing.T) {
 	}
 }
 
-func TestOnePartnerDownBringsDownTheWholeRequest(t *testing.T) {
-	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: "partner-flaky"}
+func TestOnePartnerDownReturnsAPartialResponse(t *testing.T) {
+	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
 
-	_, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest())
-	if err == nil {
-		t.Fatal("one partner down and the request answered success — there is a fallback where there should be none")
+	response, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest())
+	if err != nil {
+		t.Fatalf("Quote: %v, expected a partial response instead of an error", err)
 	}
 
-	var failure *partner.Error
-	if !errors.As(err, &failure) || failure.Partner != "partner-flaky" {
-		t.Fatalf("error %v does not identify the partner that failed", err)
+	if !response.Degraded {
+		t.Error("degraded is false with one partner down, expected true")
+	}
+	if got := response.MissingPartners; len(got) != 1 || got[0] != "partner-flaky" {
+		t.Errorf("missing_partners %v, expected [partner-flaky]", got)
+	}
+	if len(response.Quotes) != 2 {
+		t.Fatalf("%d quotes, expected 2 (the two partners that answered)", len(response.Quotes))
+	}
+	expected := []string{"partner-degrading", "partner-slow"}
+	for i, name := range expected {
+		if response.Quotes[i].Partner != name {
+			t.Errorf("quote %d is from %q, expected from %q", i, response.Quotes[i].Partner, name)
+		}
 	}
 
-	if last := quoter.calls[len(quoter.calls)-1]; last != "partner-flaky" {
-		t.Errorf("last partner called was %q, expected partner-flaky", last)
+	if last := quoter.calls[len(quoter.calls)-1]; last != "partner-degrading" {
+		t.Errorf("last partner called was %q, expected partner-degrading (the loop keeps going after a failure)", last)
+	}
+}
+
+func TestAllPartnersDownReturnsNoQuotesButNoError(t *testing.T) {
+	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
+
+	response, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest())
+	if err != nil {
+		t.Fatalf("Quote: %v, expected a response with no quotes instead of an error", err)
+	}
+
+	if len(response.Quotes) != 0 {
+		t.Fatalf("%d quotes, expected 0", len(response.Quotes))
+	}
+	if !response.Degraded {
+		t.Error("degraded is false with every partner down, expected true")
+	}
+	expected := []string{"partner-slow", "partner-flaky", "partner-degrading"}
+	if len(response.MissingPartners) != len(expected) {
+		t.Fatalf("missing_partners %v, expected %v", response.MissingPartners, expected)
+	}
+	for i, name := range expected {
+		if response.MissingPartners[i] != name {
+			t.Errorf("missing_partners[%d] %q, expected %q", i, response.MissingPartners[i], name)
+		}
 	}
 }
 

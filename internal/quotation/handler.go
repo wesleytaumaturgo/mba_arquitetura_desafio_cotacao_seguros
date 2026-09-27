@@ -65,8 +65,26 @@ func (a *API) quote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(response.Quotes) == 0 {
+		platform.WriteJSON(w, http.StatusServiceUnavailable, noPartnerQuoteAvailable{
+			Error:           "no partner quote available",
+			TenantID:        tenant,
+			MissingPartners: response.MissingPartners,
+		})
+		return
+	}
+
 	w.Header().Set("X-Tenant-Id", tenant)
 	platform.WriteJSON(w, http.StatusOK, response)
+}
+
+// noPartnerQuoteAvailable is the 503 body when every partner failed for this
+// request (FDD seção 5); distinct from platform.ErrorBody because it always
+// carries tenant_id and the full list of missing partners.
+type noPartnerQuoteAvailable struct {
+	Error           string   `json:"error"`
+	TenantID        string   `json:"tenant_id"`
+	MissingPartners []string `json:"missing_partners"`
 }
 
 func (a *API) respondPartnerFailure(w http.ResponseWriter, err error) {

@@ -27,10 +27,12 @@ func (s *Service) Quote(ctx context.Context, tenant string, request Request) (Re
 	forPartner := partnerRequest{Broker: tenant, Request: request}
 
 	quotes := make([]partner.Quote, 0, len(s.partners))
+	missingPartners := make([]string, 0, len(s.partners))
 	for _, p := range s.partners {
 		quote, err := s.quoter.Quote(ctx, p, forPartner)
 		if err != nil {
-			return Response{}, err
+			missingPartners = append(missingPartners, p.Name)
+			continue
 		}
 		quote.Source = "live"
 		quotes = append(quotes, quote)
@@ -41,8 +43,10 @@ func (s *Service) Quote(ctx context.Context, tenant string, request Request) (Re
 	})
 
 	return Response{
-		TenantID:  tenant,
-		Quotes:    quotes,
-		ElapsedMs: time.Since(start).Milliseconds(),
+		TenantID:        tenant,
+		Quotes:          quotes,
+		ElapsedMs:       time.Since(start).Milliseconds(),
+		Degraded:        len(missingPartners) > 0,
+		MissingPartners: missingPartners,
 	}, nil
 }
