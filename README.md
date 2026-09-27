@@ -125,5 +125,3 @@ implementação), depois o plano de tasks (`docs/plano-resiliencia-parceiras.md`
 comando `/implement-plan`, com um laço implementador ↔ revisor por task (no máximo três rodadas antes de
 escalar para decisão humana). Extratos derivados de cada documento longo (chaves, contratos, decisões,
 rastreabilidade) ficam em [`docs/work/`](docs/work/), para que quem consome um documento não precise reler
-o original inteiro. Métricas do próprio processo (rodadas por task, achados por severidade, escapes de
-revisão) ficam em [`docs/workflow-metrics.md`](docs/workflow-metrics.md).
