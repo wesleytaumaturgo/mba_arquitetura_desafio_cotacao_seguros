@@ -1,0 +1,520 @@
+docker compose up -d --build --wait
+time="2026-09-27T12:52:53-03:00" level=warning msg="Docker Compose requires buildx plugin to be installed"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Building 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Building 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Building 
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Building 
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Building 
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Building 
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  769.5kB
+Sending build context to Docker daemon  769.5kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+Sending build context to Docker daemon  769.5kB
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> f556a31f59bf
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> f556a31f59bf
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> f556a31f59bf
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> Using cache
+ ---> Using cache
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-flaky:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Built 
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-slow:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Built 
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-degrading:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Building 
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:53-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Building 
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  769.5kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 4cf698b8c338
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 9872c9c4d922
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 4f5c96144b11
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> ab48830fb284
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> e7daabc682eb
+Successfully built e7daabc682eb
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-quotation-api:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Built 
+ Container cotacao-partner-degrading Running 
+ Container cotacao-partner-slow Running 
+ Container cotacao-partner-flaky Running 
+ Container cotacao-jaeger Running 
+ Container cotacao-redis Recreate 
+ Container cotacao-otel-collector Running 
+ Container cotacao-prometheus Running 
+ Container cotacao-quotation-api Running 
+ Container cotacao-redis Recreated 
+ Container cotacao-redis Starting 
+ Container cotacao-partner-degrading Waiting 
+ Container cotacao-partner-slow Waiting 
+ Container cotacao-partner-flaky Waiting 
+ Container cotacao-redis Started 
+ Container cotacao-partner-slow Healthy 
+ Container cotacao-partner-degrading Healthy 
+ Container cotacao-partner-flaky Healthy 
+ Container cotacao-partner-slow Waiting 
+ Container cotacao-redis Waiting 
+ Container cotacao-jaeger Waiting 
+ Container cotacao-quotation-api Waiting 
+ Container cotacao-otel-collector Waiting 
+ Container cotacao-partner-degrading Waiting 
+ Container cotacao-prometheus Waiting 
+ Container cotacao-partner-flaky Waiting 
+ Container cotacao-quotation-api Healthy 
+ Container cotacao-partner-slow Healthy 
+ Container cotacao-partner-degrading Healthy 
+ Container cotacao-partner-flaky Healthy 
+ Container cotacao-jaeger Healthy 
+ Container cotacao-prometheus Healthy 
+ Container cotacao-otel-collector Healthy 
+ Container cotacao-redis Healthy 
+make load
+make[1]: Entrando no diretório '/home/wesley/Github/MBA/LAB/forks/mba_arquitetura_desafio_cotacao_seguros'
+docker compose run --rm --build loadgen 
+time="2026-09-27T12:52:59-03:00" level=warning msg="Docker Compose requires buildx plugin to be installed"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Building 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Building 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Building 
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Building 
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Building 
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Building 
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  524.4kBSending build context to Docker daemon  769.5kB
+Sending build context to Docker daemon  769.5kB
+Sending build context to Docker daemon  769.5kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> f556a31f59bf
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> f556a31f59bf
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> f556a31f59bf
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> Using cache
+ ---> Using cache
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> 046b9b86d48f
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 04e1ddfae726
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+ ---> Using cache
+ ---> db387dbe1f3a
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> 04e1ddfae726
+ ---> Using cache
+ ---> 815293e9854b
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully built 815293e9854b
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-flaky:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-flaky Built 
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-degrading:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-degrading Built 
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-partner-slow:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-partner-slow Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Building 
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:52:59-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Building 
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  769.5kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Using cache
+ ---> 4cf698b8c338
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> Using cache
+ ---> 9872c9c4d922
+Step 11/13 : EXPOSE 8080
+ ---> Using cache
+ ---> 4f5c96144b11
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Using cache
+ ---> ab48830fb284
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> e7daabc682eb
+Successfully built e7daabc682eb
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-quotation-api:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-quotation-api Built 
+ Container cotacao-partner-slow Running 
+ Container cotacao-partner-degrading Running 
+ Container cotacao-partner-flaky Running 
+ Container cotacao-jaeger Running 
+ Container cotacao-otel-collector Running 
+ Container cotacao-quotation-api Running 
+ Container cotacao-partner-degrading Waiting 
+ Container cotacao-partner-slow Waiting 
+ Container cotacao-partner-flaky Waiting 
+ Container cotacao-partner-flaky Healthy 
+ Container cotacao-partner-slow Healthy 
+ Container cotacao-partner-degrading Healthy 
+time="2026-09-27T12:53:00-03:00" level=warning msg="Docker Compose requires buildx plugin to be installed"
+ Image mba_arquitetura_desafio_cotacao_seguros-loadgen Building 
+time="2026-09-27T12:53:00-03:00" level=warning msg="Failed to get credentials for registry: staging-k8s.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:53:00-03:00" level=warning msg="Failed to get credentials for registry: marketplace.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:53:00-03:00" level=warning msg="Failed to get credentials for registry: gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:53:00-03:00" level=warning msg="Failed to get credentials for registry: us.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:53:00-03:00" level=warning msg="Failed to get credentials for registry: eu.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+time="2026-09-27T12:53:00-03:00" level=warning msg="Failed to get credentials for registry: asia.gcr.io" error="error getting credentials - err: exec: \"docker-credential-gcloud\": executable file not found in $PATH, out: ``"
+ Image mba_arquitetura_desafio_cotacao_seguros-loadgen Building 
+Sending build context to Docker daemon  524.4kBSending build context to Docker daemon  769.5kB
+Step 1/13 : ARG GO_VERSION=1.25
+Step 2/13 : FROM golang:${GO_VERSION}-alpine AS build
+ ---> 07d6e65bb14b
+Step 3/13 : WORKDIR /src
+ ---> Using cache
+ ---> 682a18eed9e3
+Step 4/13 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 86c2b47aaf00
+Step 5/13 : RUN go mod download
+ ---> Using cache
+ ---> 23f00df3ebd3
+Step 6/13 : COPY . .
+ ---> Using cache
+ ---> 3bbe1dbda80c
+Step 7/13 : ARG CMD=quotation-api
+ ---> Using cache
+ ---> 9f79b6589a70
+Step 8/13 : RUN CGO_ENABLED=0 go build -trimpath -o /out/app ./cmd/${CMD}
+ ---> Running in f7bcadcd99ab
+ ---> Removed intermediate container f7bcadcd99ab
+ ---> cd92169bc3f0
+Step 9/13 : FROM alpine:3.20
+ ---> bf8527eb54c3
+Step 10/13 : COPY --from=build /out/app /app
+ ---> 2222a7dd1c66
+Step 11/13 : EXPOSE 8080
+ ---> Running in 11aa40312efc
+ ---> Removed intermediate container 11aa40312efc
+ ---> b8efb0b9c251
+Step 12/13 : ENTRYPOINT ["/app"]
+ ---> Running in dd7eca1bf47f
+ ---> Removed intermediate container dd7eca1bf47f
+ ---> d63da5218801
+Step 13/13 : LABEL com.docker.compose.image.builder=classic
+ ---> Running in ec32e154b1a3
+ ---> Removed intermediate container ec32e154b1a3
+ ---> 96d8859073e7
+Successfully built 96d8859073e7
+Successfully tagged mba_arquitetura_desafio_cotacao_seguros-loadgen:latest
+ Image mba_arquitetura_desafio_cotacao_seguros-loadgen Built 
+ Image mba_arquitetura_desafio_cotacao_seguros-loadgen Built 
+ Container cotacao-quotation-api Waiting 
+ Container cotacao-quotation-api Healthy 
+ Container mba_arquitetura_desafio_cotacao_seguros-loadgen-run-27107a5f01b0 Creating 
+ Container mba_arquitetura_desafio_cotacao_seguros-loadgen-run-27107a5f01b0 Created 
+baseline: 10 requests, one at a time...
+load: 200 requests, 50 at a time...
+
+loadgen · http://quotation-api:8080/quotes · tenant corretora-a · 5 distinct quotes
+
+baseline — 10 requests, 1 in flight, 15:53:11 UTC to 15:53:29 UTC
+  success        5 of 10 (50%)
+  latency        p50 1.89s   p95 2.04s   p99 2.04s   max 2.04s
+  throughput     0.5 req/s in 18.77s
+  failures       HTTP 502 from partner-flaky: 5
+
+load — 200 requests, 50 in flight, 15:53:29 UTC to 15:53:54 UTC
+  success        120 of 200 (60%)
+  latency        p50 6.11s   p95 8.01s   p99 8.03s   max 8.05s
+  throughput     8.1 req/s in 24.81s
+  failures       HTTP 502 from partner-flaky: 80
+
+baseline → load
+  p95 latency    2.04s → 8.01s   3.9x
+  max latency    2.04s → 8.05s   4.0x
+  success        50% → 60%
+  throughput     0.5 → 8.1 req/s
+
+where to look
+  Jaeger         http://localhost:16686 · service quotation-api · operation POST /quotes
+  load window    15:53:29 UTC to 15:53:54 UTC (sort by longest first)
+  step by step   docs/roteiro-cenario-de-falha.md
+
+make[1]: Saindo do diretório '/home/wesley/Github/MBA/LAB/forks/mba_arquitetura_desafio_cotacao_seguros'

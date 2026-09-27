@@ -24,3 +24,9 @@ vendor/
 .vscode/
 *.swp
 *~
+
+# tooling do workflow (copiado de ~/Github/MBA/LAB/workspace, não é entrega)
+.claude/
+.cursor/
+.mcp.json
+.env

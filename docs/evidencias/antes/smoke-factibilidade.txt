@@ -1,0 +1,34 @@
+go test ./cmd/partner-mock -run Feasibility -v
+=== RUN   TestFeasibilityBreakersOpenOnTheDefaultProfile
+=== RUN   TestFeasibilityBreakersOpenOnTheDefaultProfile/3_consecutive_failures
+    feasibility_test.go:132: opened on request 9 (9 partner calls), 13 openings, 4 recoveries, 65 requests short-circuited
+=== RUN   TestFeasibilityBreakersOpenOnTheDefaultProfile/5_consecutive_failures
+    feasibility_test.go:132: opened on request 42 (42 partner calls), 7 openings, 2 recoveries, 35 requests short-circuited
+=== RUN   TestFeasibilityBreakersOpenOnTheDefaultProfile/50%_failures_over_a_window_of_10
+    feasibility_test.go:132: opened on request 10 (10 partner calls), 15 openings, 6 recoveries, 75 requests short-circuited
+=== RUN   TestFeasibilityBreakersOpenOnTheDefaultProfile/60%_failures_over_a_window_of_20
+    feasibility_test.go:132: opened on request 55 (55 partner calls), 8 openings, 1 recoveries, 80 requests short-circuited
+--- PASS: TestFeasibilityBreakersOpenOnTheDefaultProfile (0.00s)
+    --- PASS: TestFeasibilityBreakersOpenOnTheDefaultProfile/3_consecutive_failures (0.00s)
+    --- PASS: TestFeasibilityBreakersOpenOnTheDefaultProfile/5_consecutive_failures (0.00s)
+    --- PASS: TestFeasibilityBreakersOpenOnTheDefaultProfile/50%_failures_over_a_window_of_10 (0.00s)
+    --- PASS: TestFeasibilityBreakersOpenOnTheDefaultProfile/60%_failures_over_a_window_of_20 (0.00s)
+=== RUN   TestFeasibilityBreakersCloseAgain
+=== RUN   TestFeasibilityBreakersCloseAgain/3_consecutive_failures
+    feasibility_test.go:151: opened on request 9 (9 partner calls), 13 openings, 4 recoveries, 65 requests short-circuited — the breaker flaps, which is the point: a 40% partner neither dies nor recovers for good
+=== RUN   TestFeasibilityBreakersCloseAgain/5_consecutive_failures
+    feasibility_test.go:151: opened on request 42 (42 partner calls), 7 openings, 2 recoveries, 35 requests short-circuited — the breaker flaps, which is the point: a 40% partner neither dies nor recovers for good
+=== RUN   TestFeasibilityBreakersCloseAgain/50%_failures_over_a_window_of_10
+    feasibility_test.go:151: opened on request 10 (10 partner calls), 15 openings, 6 recoveries, 75 requests short-circuited — the breaker flaps, which is the point: a 40% partner neither dies nor recovers for good
+=== RUN   TestFeasibilityBreakersCloseAgain/60%_failures_over_a_window_of_20
+    feasibility_test.go:151: opened on request 55 (55 partner calls), 8 openings, 1 recoveries, 80 requests short-circuited — the breaker flaps, which is the point: a 40% partner neither dies nor recovers for good
+--- PASS: TestFeasibilityBreakersCloseAgain (0.00s)
+    --- PASS: TestFeasibilityBreakersCloseAgain/3_consecutive_failures (0.00s)
+    --- PASS: TestFeasibilityBreakersCloseAgain/5_consecutive_failures (0.00s)
+    --- PASS: TestFeasibilityBreakersCloseAgain/50%_failures_over_a_window_of_10 (0.00s)
+    --- PASS: TestFeasibilityBreakersCloseAgain/60%_failures_over_a_window_of_20 (0.00s)
+=== RUN   TestFeasibilityBurstIsWhereTheDocsSayItIs
+    feasibility_test.go:178: burst of 9 consecutive failures at sequences 49-57, inside a single `make reproduce`
+--- PASS: TestFeasibilityBurstIsWhereTheDocsSayItIs (0.00s)
+PASS
+ok  	github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/cmd/partner-mock	(cached)

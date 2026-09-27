@@ -1,0 +1,24 @@
+loadgen · http://quotation-api:8080/quotes · tenant corretora-a · 5 distinct quotes
+
+baseline — 10 requests, 1 in flight, 15:53:11 UTC to 15:53:29 UTC
+  success        5 of 10 (50%)
+  latency        p50 1.89s   p95 2.04s   p99 2.04s   max 2.04s
+  throughput     0.5 req/s in 18.77s
+  failures       HTTP 502 from partner-flaky: 5
+
+load — 200 requests, 50 in flight, 15:53:29 UTC to 15:53:54 UTC
+  success        120 of 200 (60%)
+  latency        p50 6.11s   p95 8.01s   p99 8.03s   max 8.05s
+  throughput     8.1 req/s in 24.81s
+  failures       HTTP 502 from partner-flaky: 80
+
+baseline → load
+  p95 latency    2.04s → 8.01s   3.9x
+  max latency    2.04s → 8.05s   4.0x
+  success        50% → 60%
+  throughput     0.5 → 8.1 req/s
+
+where to look
+  Jaeger         http://localhost:16686 · service quotation-api · operation POST /quotes
+  load window    15:53:29 UTC to 15:53:54 UTC (sort by longest first)
+  step by step   docs/roteiro-cenario-de-falha.md
