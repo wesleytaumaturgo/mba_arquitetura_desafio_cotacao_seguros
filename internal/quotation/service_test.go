@@ -3,16 +3,20 @@ package quotation
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
+	"github.com/sony/gobreaker/v2"
 
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/cache"
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/partner"
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform"
+	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/resilience"
 )
 
 var threePartners = []platform.Partner{
@@ -72,7 +76,7 @@ func defaultPremiums() map[string]int64 {
 
 func TestQuoteAggregatesTheThreePartnersSortedByPremium(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	response, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, nil, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
@@ -137,7 +141,7 @@ func TestQuoteCallsThePartnersSerially(t *testing.T) {
 	quoter := &fakeQuoter{delay: 40 * time.Millisecond, premiums: defaultPremiums()}
 
 	start := time.Now()
-	if _, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest()); err != nil {
+	if _, err := NewService(threePartners, quoter, nil, nil).Quote(context.Background(), "corretora-a", validRequest()); err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
 	elapsed := time.Since(start)
@@ -153,7 +157,7 @@ func TestQuoteCallsThePartnersSerially(t *testing.T) {
 func TestOnePartnerDownReturnsAPartialResponse(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
 
-	response, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, nil, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v, expected a partial response instead of an error", err)
 	}
@@ -182,7 +186,7 @@ func TestOnePartnerDownReturnsAPartialResponse(t *testing.T) {
 func TestAllPartnersDownReturnsNoQuotesButNoError(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
 
-	response, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, nil, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v, expected a response with no quotes instead of an error", err)
 	}
@@ -206,7 +210,7 @@ func TestAllPartnersDownReturnsNoQuotesButNoError(t *testing.T) {
 
 func TestBrokerGoesInThePartnerRequest(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	service := NewService(threePartners[:1], quoter, nil)
+	service := NewService(threePartners[:1], quoter, nil, nil)
 
 	if _, err := service.Quote(context.Background(), "corretora-a", validRequest()); err != nil {
 		t.Fatalf("Quote: %v", err)
@@ -275,7 +279,7 @@ func TestQuoteUsesTheCacheEntryWithoutCallingThePartner(t *testing.T) {
 	}
 
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", request)
+	response, err := NewService(threePartners, quoter, quoteCache, nil).Quote(context.Background(), "corretora-a", request)
 	if err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
@@ -314,7 +318,7 @@ func TestQuoteFallsBackToLiveOnCacheMiss(t *testing.T) {
 	request := validRequest()
 
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", request)
+	response, err := NewService(threePartners, quoter, quoteCache, nil).Quote(context.Background(), "corretora-a", request)
 	if err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
@@ -340,7 +344,7 @@ func TestQuoteIgnoresARedisFailureAndStillAnswersLive(t *testing.T) {
 	server.Close() // Redis unreachable before the very first call: Get and Set must be best effort.
 
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, quoteCache, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
@@ -367,7 +371,7 @@ func TestPartialResponseWithCacheAndFallback(t *testing.T) {
 		}
 
 		quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
-		response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", request)
+		response, err := NewService(threePartners, quoter, quoteCache, nil).Quote(context.Background(), "corretora-a", request)
 		if err != nil {
 			t.Fatalf("Quote: %v", err)
 		}
@@ -412,7 +416,7 @@ func TestPartialResponseWithCacheAndFallback(t *testing.T) {
 		_, quoteCache := newTestCache(t, time.Minute)
 
 		quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
-		response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", validRequest())
+		response, err := NewService(threePartners, quoter, quoteCache, nil).Quote(context.Background(), "corretora-a", validRequest())
 		if err != nil {
 			t.Fatalf("Quote: %v, expected a response with no quotes instead of an error", err)
 		}
@@ -428,6 +432,121 @@ func TestPartialResponseWithCacheAndFallback(t *testing.T) {
 			if response.MissingPartners[i] != name {
 				t.Errorf("missing_partners[%d] %q, expected %q", i, response.MissingPartners[i], name)
 			}
+		}
+	})
+}
+
+// alwaysFails is a breaker fn used only to force a *resilience.Breaker into a known state during test
+// setup; it never reaches the fakeQuoter (T09 critério de aceite 1: the Quoter must not be called for
+// a partner whose breaker is already open).
+func alwaysFails() (partner.Quote, error) {
+	return partner.Quote{}, errors.New("boom")
+}
+
+// TestQuoteSkipsThePartnerWhenItsBreakerIsOpen is the teste que prova of T09 (FDD seção 4, passo 2.3):
+// service.Quote must wrap the live call in breakers[p.Name].Execute when a breaker is configured for
+// that partner, and call the Quoter directly (as in T08) otherwise.
+func TestQuoteSkipsThePartnerWhenItsBreakerIsOpen(t *testing.T) {
+	t.Run("an open breaker skips the Quoter and marks the partner missing, other partners unaffected", func(t *testing.T) {
+		breaker := resilience.NewBreaker("partner-flaky", resilience.Config{
+			ConsecutiveFailures: 1,
+			OpenTimeout:         time.Hour,
+			HalfOpenMaxRequests: 1,
+		})
+		if _, err := breaker.Execute(context.Background(), alwaysFails); err == nil {
+			t.Fatal("forcing the breaker open: expected an error from alwaysFails")
+		}
+		if state := breaker.State(); state != gobreaker.StateOpen {
+			t.Fatalf("breaker state %v after 1 consecutive failure (ConsecutiveFailures: 1), expected StateOpen", state)
+		}
+
+		breakers := map[string]*resilience.Breaker{"partner-flaky": breaker}
+		quoter := &fakeQuoter{premiums: defaultPremiums()}
+		response, err := NewService(threePartners, quoter, nil, breakers).
+			Quote(context.Background(), "corretora-a", validRequest())
+		if err != nil {
+			t.Fatalf("Quote: %v, expected a partial response instead of an error", err)
+		}
+
+		for _, called := range quoter.calls {
+			if called == "partner-flaky" {
+				t.Fatalf("the quoter was called for partner-flaky even though its breaker is open: %v", quoter.calls)
+			}
+		}
+		if got := len(quoter.calls); got != 2 {
+			t.Fatalf("quoter called %d times, expected 2 (the two partners without a configured breaker): %v", got, quoter.calls)
+		}
+		var sawSlow, sawDegrading bool
+		for _, called := range quoter.calls {
+			switch called {
+			case "partner-slow":
+				sawSlow = true
+			case "partner-degrading":
+				sawDegrading = true
+			}
+		}
+		if !sawSlow || !sawDegrading {
+			t.Fatalf("quoter.calls %v, expected partner-slow and partner-degrading (no breaker configured for them)", quoter.calls)
+		}
+
+		if !response.Degraded {
+			t.Error("degraded is false with partner-flaky's breaker open, expected true")
+		}
+		if got := response.MissingPartners; len(got) != 1 || got[0] != "partner-flaky" {
+			t.Errorf("missing_partners %v, expected [partner-flaky]", got)
+		}
+		if len(response.Quotes) != 2 {
+			t.Fatalf("%d quotes, expected 2 (the two partners without an open breaker)", len(response.Quotes))
+		}
+	})
+
+	t.Run("ErrTooManyRequests from a saturated half-open breaker is treated like any other partner failure", func(t *testing.T) {
+		breaker := resilience.NewBreaker("partner-flaky", resilience.Config{
+			ConsecutiveFailures: 1,
+			OpenTimeout:         20 * time.Millisecond,
+			HalfOpenMaxRequests: 1,
+		})
+		if _, err := breaker.Execute(context.Background(), alwaysFails); err == nil {
+			t.Fatal("forcing the breaker open: expected an error from alwaysFails")
+		}
+		time.Sleep(30 * time.Millisecond) // past OpenTimeout: the breaker now allows exactly 1 half-open probe.
+
+		started := make(chan struct{})
+		release := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = breaker.Execute(context.Background(), func() (partner.Quote, error) {
+				close(started)
+				<-release
+				return partner.Quote{}, nil
+			})
+		}()
+		<-started // the single half-open slot (HalfOpenMaxRequests: 1) is now occupied.
+		defer func() {
+			close(release)
+			wg.Wait()
+		}()
+
+		breakers := map[string]*resilience.Breaker{"partner-flaky": breaker}
+		quoter := &fakeQuoter{premiums: defaultPremiums()}
+		response, err := NewService(threePartners, quoter, nil, breakers).
+			Quote(context.Background(), "corretora-a", validRequest())
+		if err != nil {
+			t.Fatalf("Quote: %v, expected a partial response instead of an error", err)
+		}
+
+		for _, called := range quoter.calls {
+			if called == "partner-flaky" {
+				t.Fatalf("the quoter was called for partner-flaky even though its breaker rejected with ErrTooManyRequests: %v", quoter.calls)
+			}
+		}
+		if got := response.MissingPartners; len(got) != 1 || got[0] != "partner-flaky" {
+			t.Errorf("missing_partners %v, expected [partner-flaky] (ErrTooManyRequests counts as a failure, FDD seção 6)", got)
+		}
+		if !response.Degraded {
+			t.Error("degraded is false with partner-flaky rejected by ErrTooManyRequests, expected true")
 		}
 	})
 }

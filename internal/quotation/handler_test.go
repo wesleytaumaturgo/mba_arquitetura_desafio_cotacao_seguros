@@ -24,7 +24,7 @@ func testAPI(quoter Quoter) http.Handler {
 }
 
 func testAPIWithCache(quoter Quoter, quoteCache *cache.QuoteCache) http.Handler {
-	return NewAPI(NewService(threePartners, quoter, quoteCache), []string{"corretora-a", "corretora-b"}).Routes()
+	return NewAPI(NewService(threePartners, quoter, quoteCache, nil), []string{"corretora-a", "corretora-b"}).Routes()
 }
 
 func postQuotes(h http.Handler, tenant, body string) *httptest.ResponseRecorder {
