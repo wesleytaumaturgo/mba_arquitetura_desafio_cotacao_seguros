@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
-	Port      string
-	Partners  []Partner
-	Tenants   []string
-	Telemetry Telemetry
+	Port           string
+	Partners       []Partner
+	Tenants        []string
+	Telemetry      Telemetry
+	CacheQuoteTTL  time.Duration
+	PartnerTimeout time.Duration
+	Breaker        Breaker
+	RedisAddr      string
 }
 
 type Partner struct {
@@ -25,6 +31,12 @@ type Telemetry struct {
 	Enabled     bool
 }
 
+type Breaker struct {
+	ConsecutiveFailures uint32
+	OpenTimeout         time.Duration
+	HalfOpenMaxRequests uint32
+}
+
 const defaultEndpoints = "partner-slow=http://localhost:9001," +
 	"partner-flaky=http://localhost:9002," +
 	"partner-degrading=http://localhost:9003"
@@ -34,6 +46,15 @@ const defaultTenants = "corretora-a,corretora-b"
 const defaultCollector = "http://localhost:4317"
 
 const defaultServiceName = "quotation-api"
+
+const (
+	defaultCacheQuoteTTLSeconds       = 900
+	defaultPartnerTimeoutMillis       = 2000
+	defaultBreakerConsecutiveFailures = 5
+	defaultBreakerOpenSeconds         = 5
+	defaultBreakerHalfOpenMaxRequests = 2
+	defaultRedisAddr                  = "redis:6379"
+)
 
 func LoadConfig(env func(string) string) (Config, error) {
 	cfg := Config{Port: text(env, "PORT", "8080")}
@@ -48,7 +69,62 @@ func LoadConfig(env func(string) string) (Config, error) {
 	if cfg.Telemetry, err = parseTelemetry(env); err != nil {
 		return Config{}, err
 	}
+	if err = parseResilience(env, &cfg); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+func parseResilience(env func(string) string, cfg *Config) error {
+	cacheSeconds, err := parseUint(env, "CACHE_QUOTE_TTL_SECONDS", defaultCacheQuoteTTLSeconds)
+	if err != nil {
+		return err
+	}
+	cfg.CacheQuoteTTL = time.Duration(cacheSeconds) * time.Second
+
+	partnerMillis, err := parseUint(env, "PARTNER_TIMEOUT_MS", defaultPartnerTimeoutMillis)
+	if err != nil {
+		return err
+	}
+	cfg.PartnerTimeout = time.Duration(partnerMillis) * time.Millisecond
+
+	consecutiveFailures, err := parseUint32(env, "BREAKER_CONSECUTIVE_FAILURES", defaultBreakerConsecutiveFailures)
+	if err != nil {
+		return err
+	}
+	cfg.Breaker.ConsecutiveFailures = consecutiveFailures
+
+	openSeconds, err := parseUint(env, "BREAKER_OPEN_SECONDS", defaultBreakerOpenSeconds)
+	if err != nil {
+		return err
+	}
+	cfg.Breaker.OpenTimeout = time.Duration(openSeconds) * time.Second
+
+	halfOpenMaxRequests, err := parseUint32(env, "BREAKER_HALF_OPEN_MAX_REQUESTS", defaultBreakerHalfOpenMaxRequests)
+	if err != nil {
+		return err
+	}
+	cfg.Breaker.HalfOpenMaxRequests = halfOpenMaxRequests
+
+	cfg.RedisAddr = text(env, "REDIS_ADDR", defaultRedisAddr)
+	return nil
+}
+
+func parseUint(env func(string) string, key string, fallback uint64) (uint64, error) {
+	raw := text(env, key, strconv.FormatUint(fallback, 10))
+	v, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %q is not a valid non-negative integer", key, raw)
+	}
+	return v, nil
+}
+
+func parseUint32(env func(string) string, key string, fallback uint32) (uint32, error) {
+	v, err := parseUint(env, key, uint64(fallback))
+	if err != nil {
+		return 0, err
+	}
+	return uint32(v), nil
 }
 
 func parseTelemetry(env func(string) string) (Telemetry, error) {
