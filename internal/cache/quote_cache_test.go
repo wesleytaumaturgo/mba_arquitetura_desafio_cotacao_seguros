@@ -49,6 +49,10 @@ func TestKeyFormatIsStableAndVersioned(t *testing.T) {
 	if len(hash) != 16 {
 		t.Fatalf("Key() hash suffix has %d chars, want 16 (%q)", len(hash), hash)
 	}
+
+	if strings.Contains(key, "12345678900") || strings.Contains(key, "ABC1234") {
+		t.Fatalf("Key() = %q, must not leak the raw document or plate into the cache key (LGPD)", key)
+	}
 }
 
 func TestSetThenGetRoundTrips(t *testing.T) {

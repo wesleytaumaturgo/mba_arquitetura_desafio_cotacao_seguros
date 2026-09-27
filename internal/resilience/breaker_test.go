@@ -18,8 +18,62 @@ import (
 
 // TestBreakerOpensAfterFiveConsecutiveFailures is the deterministic breaker test required by the
 // assignment (FDD seção 9). It uses a fixed response script on an httptest.Server, mirroring the shape
-// of the real partner-flaky burst (a run of consecutive 503s), without importing cmd/partner-mock.
+// of the real partner-flaky burst (a run of consecutive 503s), without importing cmd/partner-mock. It
+// stops at the short-circuit assertion, on purpose: this is the test the FDD/plano call "determinístico",
+// so it never needs time.Sleep (see TestBreakerHalfOpenProbesReopenAndClose for the half-open dance,
+// which does).
 func TestBreakerOpensAfterFiveConsecutiveFailures(t *testing.T) {
+	var requests int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		http.Error(w, `{"error":"partner unavailable"}`, http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	p := platform.Partner{Name: "partner-flaky", BaseURL: server.URL}
+	client := partner.NewClient(200 * time.Millisecond)
+	ctx := context.Background()
+	fn := func() (partner.Quote, error) {
+		return client.Quote(ctx, p, map[string]string{})
+	}
+
+	breaker := NewBreaker("partner-flaky", Config{
+		ConsecutiveFailures: 5,
+		OpenTimeout:         50 * time.Millisecond,
+		HalfOpenMaxRequests: 2,
+	})
+
+	// 5 consecutive failures trip the breaker open.
+	for i := 1; i <= 5; i++ {
+		if _, err := breaker.Execute(ctx, fn); err == nil {
+			t.Fatalf("call %d: expected failure from the partner, got success", i)
+		}
+	}
+	if got := atomic.LoadInt32(&requests); got != 5 {
+		t.Fatalf("server received %d requests, want 5 before the breaker opens", got)
+	}
+	if state := breaker.State(); state != gobreaker.StateOpen {
+		t.Fatalf("State() = %v, want StateOpen right after the 5th consecutive failure", state)
+	}
+
+	// A 6th call while the breaker is open must be rejected without reaching the server.
+	if _, err := breaker.Execute(ctx, fn); err == nil {
+		t.Fatal("call while breaker is open: expected an error")
+	}
+	if got := atomic.LoadInt32(&requests); got != 5 {
+		t.Fatalf("server received %d requests, want 5: the 6th call must be short-circuited", got)
+	}
+}
+
+// TestBreakerHalfOpenProbesReopenAndClose covers the half-open dance: a failed probe reopens the circuit
+// immediately, and HalfOpenMaxRequests consecutive successful probes close it again.
+//
+// gobreaker/v2 não expõe relógio injetável (as transições de half-open correm sobre time.Now()
+// internamente), então time.Sleep é a única forma de atravessar OpenTimeout aqui de forma determinística;
+// as durações usadas são as menores que não flutuam (dezenas de ms), isoladas nesta função para que o
+// teste "determinístico" acima (TestBreakerOpensAfterFiveConsecutiveFailures) nunca dependa de tempo real.
+func TestBreakerHalfOpenProbesReopenAndClose(t *testing.T) {
 	var requests int32
 
 	// Fixed script, indexed by the (1-based) request number actually received by the server:
@@ -53,25 +107,15 @@ func TestBreakerOpensAfterFiveConsecutiveFailures(t *testing.T) {
 		HalfOpenMaxRequests: 2,
 	})
 
-	// 5 consecutive failures trip the breaker open.
+	// 5 consecutive failures trip the breaker open (setup for the half-open dance below, not itself the
+	// assertion under test in this function).
 	for i := 1; i <= 5; i++ {
 		if _, err := breaker.Execute(ctx, fn); err == nil {
 			t.Fatalf("call %d: expected failure from the partner, got success", i)
 		}
 	}
-	if got := atomic.LoadInt32(&requests); got != 5 {
-		t.Fatalf("server received %d requests, want 5 before the breaker opens", got)
-	}
 	if state := breaker.State(); state != gobreaker.StateOpen {
 		t.Fatalf("State() = %v, want StateOpen right after the 5th consecutive failure", state)
-	}
-
-	// A 6th call while the breaker is open must be rejected without reaching the server.
-	if _, err := breaker.Execute(ctx, fn); err == nil {
-		t.Fatal("call while breaker is open: expected an error")
-	}
-	if got := atomic.LoadInt32(&requests); got != 5 {
-		t.Fatalf("server received %d requests, want 5: the 6th call must be short-circuited", got)
 	}
 
 	// After OpenTimeout, the breaker allows one probe (half-open). The script makes it fail, so the
