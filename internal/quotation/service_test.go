@@ -7,6 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
+
+	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/cache"
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/partner"
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform"
 )
@@ -68,7 +72,7 @@ func defaultPremiums() map[string]int64 {
 
 func TestQuoteAggregatesTheThreePartnersSortedByPremium(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	response, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
@@ -133,7 +137,7 @@ func TestQuoteCallsThePartnersSerially(t *testing.T) {
 	quoter := &fakeQuoter{delay: 40 * time.Millisecond, premiums: defaultPremiums()}
 
 	start := time.Now()
-	if _, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest()); err != nil {
+	if _, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest()); err != nil {
 		t.Fatalf("Quote: %v", err)
 	}
 	elapsed := time.Since(start)
@@ -149,7 +153,7 @@ func TestQuoteCallsThePartnersSerially(t *testing.T) {
 func TestOnePartnerDownReturnsAPartialResponse(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
 
-	response, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v, expected a partial response instead of an error", err)
 	}
@@ -178,7 +182,7 @@ func TestOnePartnerDownReturnsAPartialResponse(t *testing.T) {
 func TestAllPartnersDownReturnsNoQuotesButNoError(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
 
-	response, err := NewService(threePartners, quoter).Quote(context.Background(), "corretora-a", validRequest())
+	response, err := NewService(threePartners, quoter, nil).Quote(context.Background(), "corretora-a", validRequest())
 	if err != nil {
 		t.Fatalf("Quote: %v, expected a response with no quotes instead of an error", err)
 	}
@@ -202,7 +206,7 @@ func TestAllPartnersDownReturnsNoQuotesButNoError(t *testing.T) {
 
 func TestBrokerGoesInThePartnerRequest(t *testing.T) {
 	quoter := &fakeQuoter{premiums: defaultPremiums()}
-	service := NewService(threePartners[:1], quoter)
+	service := NewService(threePartners[:1], quoter, nil)
 
 	if _, err := service.Quote(context.Background(), "corretora-a", validRequest()); err != nil {
 		t.Fatalf("Quote: %v", err)
@@ -235,4 +239,195 @@ func serialize(t *testing.T, v any) string {
 		t.Fatalf("json.Marshal: %v", err)
 	}
 	return string(b)
+}
+
+// newTestCache starts a real miniredis server and wraps it in a real cache.QuoteCache (FDD seção 9:
+// the determinístico test must not use a fake). The returned *miniredis.Miniredis lets a test close
+// the server mid-flight to prove Redis failures are best effort (T08 critério de aceite 5).
+func newTestCache(t *testing.T, ttl time.Duration) (*miniredis.Miniredis, *cache.QuoteCache) {
+	t.Helper()
+
+	server, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run(): %v", err)
+	}
+	t.Cleanup(server.Close)
+
+	client := redis.NewClient(&redis.Options{
+		Addr:          server.Addr(),
+		MaxRetries:    0,
+		DialTimeout:   50 * time.Millisecond,
+		DialerRetries: 1,
+	})
+	t.Cleanup(func() { _ = client.Close() })
+
+	return server, cache.NewQuoteCache(client, ttl)
+}
+
+func TestQuoteUsesTheCacheEntryWithoutCallingThePartner(t *testing.T) {
+	_, quoteCache := newTestCache(t, time.Minute)
+	request := validRequest()
+
+	cached := partner.Quote{Partner: "partner-flaky", QuoteID: "cached-quote", PremiumCents: 84210, Currency: "BRL"}
+	key := cache.Key("corretora-a", "partner-flaky", request.Fingerprint())
+	if err := quoteCache.Set(context.Background(), key, cached); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", request)
+	if err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+
+	for _, called := range quoter.calls {
+		if called == "partner-flaky" {
+			t.Fatalf("the quoter was called for partner-flaky even though it had a cache entry: %v", quoter.calls)
+		}
+	}
+
+	var flakyQuote *partner.Quote
+	for i := range response.Quotes {
+		if response.Quotes[i].Partner == "partner-flaky" {
+			flakyQuote = &response.Quotes[i]
+		}
+	}
+	if flakyQuote == nil {
+		t.Fatalf("no quote from partner-flaky in the response: %+v", response.Quotes)
+	}
+	if flakyQuote.Source != "cache" {
+		t.Errorf("source %q, expected cache", flakyQuote.Source)
+	}
+	if flakyQuote.AgeSeconds == nil {
+		t.Error("age_seconds is nil for a cache hit, expected non-nil")
+	}
+	if response.Degraded {
+		t.Error("degraded is true with a cache hit and two live successes, expected false (a cache hit is not degradation)")
+	}
+	if len(response.MissingPartners) != 0 {
+		t.Errorf("missing_partners %v, expected none", response.MissingPartners)
+	}
+}
+
+func TestQuoteFallsBackToLiveOnCacheMiss(t *testing.T) {
+	_, quoteCache := newTestCache(t, time.Minute)
+	request := validRequest()
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", request)
+	if err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+	if len(quoter.calls) != 3 {
+		t.Fatalf("quoter called %d times, expected 3 on a full cache miss: %v", len(quoter.calls), quoter.calls)
+	}
+	for _, quote := range response.Quotes {
+		if quote.Source != "live" {
+			t.Errorf("quote from %q has source %q, expected live", quote.Partner, quote.Source)
+		}
+	}
+
+	for _, p := range threePartners {
+		key := cache.Key("corretora-a", p.Name, request.Fingerprint())
+		if _, _, ok := quoteCache.Get(context.Background(), key); !ok {
+			t.Errorf("no cache entry written for %q after a live success, expected Set to have run", p.Name)
+		}
+	}
+}
+
+func TestQuoteIgnoresARedisFailureAndStillAnswersLive(t *testing.T) {
+	server, quoteCache := newTestCache(t, time.Minute)
+	server.Close() // Redis unreachable before the very first call: Get and Set must be best effort.
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", validRequest())
+	if err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+	if len(response.Quotes) != 3 {
+		t.Fatalf("%d quotes, expected 3 even with Redis unreachable (Get/Set failures must not block a live answer)", len(response.Quotes))
+	}
+	if response.Degraded {
+		t.Error("degraded is true with Redis unreachable but every partner live, expected false")
+	}
+}
+
+// TestPartialResponseWithCacheAndFallback is the second teste determinístico exigido pelo enunciado
+// (FDD seção 9): a real miniredis + cache.QuoteCache, not a fake, covering cache hit, live success,
+// live failure and total failure together.
+func TestPartialResponseWithCacheAndFallback(t *testing.T) {
+	t.Run("cache hit, live success and live failure combine into a partial response", func(t *testing.T) {
+		_, quoteCache := newTestCache(t, time.Minute)
+		request := validRequest()
+
+		cached := partner.Quote{Partner: "partner-slow", QuoteID: "cached-slow", PremiumCents: 91234, Currency: "BRL"}
+		key := cache.Key("corretora-a", "partner-slow", request.Fingerprint())
+		if err := quoteCache.Set(context.Background(), key, cached); err != nil {
+			t.Fatalf("Set: %v", err)
+		}
+
+		quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-flaky")}
+		response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", request)
+		if err != nil {
+			t.Fatalf("Quote: %v", err)
+		}
+
+		for _, called := range quoter.calls {
+			if called == "partner-slow" {
+				t.Fatalf("quoter called for partner-slow even though it had a cache entry: %v", quoter.calls)
+			}
+		}
+
+		if !response.Degraded {
+			t.Error("degraded is false with partner-flaky failing, expected true")
+		}
+		if got := response.MissingPartners; len(got) != 1 || got[0] != "partner-flaky" {
+			t.Errorf("missing_partners %v, expected [partner-flaky]", got)
+		}
+		if len(response.Quotes) != 2 {
+			t.Fatalf("%d quotes, expected 2 (cache hit + live success)", len(response.Quotes))
+		}
+
+		bySource := map[string]partner.Quote{}
+		for _, q := range response.Quotes {
+			bySource[q.Partner] = q
+		}
+		slow, ok := bySource["partner-slow"]
+		if !ok {
+			t.Fatalf("no quote from partner-slow: %+v", response.Quotes)
+		}
+		if slow.Source != "cache" || slow.AgeSeconds == nil {
+			t.Errorf("partner-slow quote %+v, expected source cache with age_seconds set", slow)
+		}
+		degrading, ok := bySource["partner-degrading"]
+		if !ok {
+			t.Fatalf("no quote from partner-degrading: %+v", response.Quotes)
+		}
+		if degrading.Source != "live" {
+			t.Errorf("partner-degrading source %q, expected live", degrading.Source)
+		}
+	})
+
+	t.Run("empty cache and every partner failing live produces no quotes and every partner missing", func(t *testing.T) {
+		_, quoteCache := newTestCache(t, time.Minute)
+
+		quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
+		response, err := NewService(threePartners, quoter, quoteCache).Quote(context.Background(), "corretora-a", validRequest())
+		if err != nil {
+			t.Fatalf("Quote: %v, expected a response with no quotes instead of an error", err)
+		}
+
+		if len(response.Quotes) != 0 {
+			t.Fatalf("%d quotes, expected 0 (the handler turns this into the T07b 503)", len(response.Quotes))
+		}
+		expected := []string{"partner-slow", "partner-flaky", "partner-degrading"}
+		if len(response.MissingPartners) != len(expected) {
+			t.Fatalf("missing_partners %v, expected %v", response.MissingPartners, expected)
+		}
+		for i, name := range expected {
+			if response.MissingPartners[i] != name {
+				t.Errorf("missing_partners[%d] %q, expected %q", i, response.MissingPartners[i], name)
+			}
+		}
+	})
 }

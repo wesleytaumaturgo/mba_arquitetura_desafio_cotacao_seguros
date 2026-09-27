@@ -1,11 +1,16 @@
 package quotation
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/cache"
+	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/partner"
 )
 
 const validBody = `{
@@ -15,7 +20,11 @@ const validBody = `{
 }`
 
 func testAPI(quoter Quoter) http.Handler {
-	return NewAPI(NewService(threePartners, quoter), []string{"corretora-a", "corretora-b"}).Routes()
+	return testAPIWithCache(quoter, nil)
+}
+
+func testAPIWithCache(quoter Quoter, quoteCache *cache.QuoteCache) http.Handler {
+	return NewAPI(NewService(threePartners, quoter, quoteCache), []string{"corretora-a", "corretora-b"}).Routes()
 }
 
 func postQuotes(h http.Handler, tenant, body string) *httptest.ResponseRecorder {
@@ -145,6 +154,88 @@ func TestQuotesResponds503WhenNoPartnerRespond(t *testing.T) {
 		if missing[i] != name {
 			t.Errorf("missing_partners[%d] %v, expected %q", i, missing[i], name)
 		}
+	}
+}
+
+func TestQuotesResponseHasCacheSourceAndAgeSecondsForAPreloadedPartner(t *testing.T) {
+	_, quoteCache := newTestCache(t, time.Minute)
+	request := validRequest()
+
+	cached := partner.Quote{Partner: "partner-flaky", QuoteID: "cached-quote", PremiumCents: 84210, Currency: "BRL"}
+	key := cache.Key("corretora-a", "partner-flaky", request.Fingerprint())
+	if err := quoteCache.Set(context.Background(), key, cached); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	response := postQuotes(testAPIWithCache(quoter, quoteCache), "corretora-a", validBody)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status %d, expected 200: %s", response.Code, response.Body)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
+		t.Fatalf("unreadable response: %v", err)
+	}
+	if degraded, ok := decoded["degraded"]; !ok || degraded != false {
+		t.Errorf("degraded absent or not false in JSON: %s", response.Body)
+	}
+
+	quotes, ok := decoded["quotes"].([]any)
+	if !ok || len(quotes) != 3 {
+		t.Fatalf("quotes not decoded as expected: %s", response.Body)
+	}
+	var foundCacheHit bool
+	for _, q := range quotes {
+		quote, ok := q.(map[string]any)
+		if !ok {
+			t.Fatalf("quote is not an object: %v", q)
+		}
+		if quote["partner"] == "partner-flaky" {
+			foundCacheHit = true
+			if quote["source"] != "cache" {
+				t.Errorf("source %v, expected cache: %s", quote["source"], response.Body)
+			}
+			if _, ok := quote["age_seconds"]; !ok {
+				t.Errorf("age_seconds absent for a cache hit: %s", response.Body)
+			}
+			continue
+		}
+		if quote["source"] != "live" {
+			t.Errorf("source %v, expected live: %s", quote["source"], response.Body)
+		}
+		if _, ok := quote["age_seconds"]; ok {
+			t.Errorf("age_seconds present for a live quote: %s", response.Body)
+		}
+	}
+	if !foundCacheHit {
+		t.Fatalf("no quote from partner-flaky in the response: %s", response.Body)
+	}
+}
+
+func TestQuotesResponds503WithARealEmptyCacheWhenNoPartnerRespond(t *testing.T) {
+	_, quoteCache := newTestCache(t, time.Minute)
+
+	quoter := &fakeQuoter{premiums: defaultPremiums(), failOn: failing("partner-slow", "partner-flaky", "partner-degrading")}
+	response := postQuotes(testAPIWithCache(quoter, quoteCache), "corretora-a", validBody)
+
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status %d, expected 503: %s", response.Code, response.Body)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
+		t.Fatalf("unreadable error: %v", err)
+	}
+	if decoded["error"] != "no partner quote available" {
+		t.Errorf("error %v, expected %q", decoded["error"], "no partner quote available")
+	}
+	if decoded["tenant_id"] != "corretora-a" {
+		t.Errorf("tenant_id %v, expected corretora-a", decoded["tenant_id"])
+	}
+	missing, ok := decoded["missing_partners"].([]any)
+	if !ok || len(missing) != 3 {
+		t.Fatalf("missing_partners %v, expected the three partners", decoded["missing_partners"])
 	}
 }
 
