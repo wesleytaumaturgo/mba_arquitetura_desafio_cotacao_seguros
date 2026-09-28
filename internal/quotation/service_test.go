@@ -69,7 +69,12 @@ func (f *fakeQuoter) Quote(_ context.Context, p platform.Partner, request any) (
 
 	f.calls = append(f.calls, p.Name)
 	f.requests = append(f.requests, request)
-	time.Sleep(f.delay)
+	// fakeQuoter simulates a partner's real latency (only ever tens of ms, e.g.
+	// TestQuoteCallsThePartnersSerially) so the serial-vs-concurrent assertions have something to
+	// measure; it has no injectable clock of its own. Skipped when delay is zero (T13 item 3).
+	if f.delay > 0 {
+		time.Sleep(f.delay)
+	}
 
 	if f.failOn[p.Name] {
 		return partner.Quote{}, &partner.Error{Partner: p.Name, Status: 503, Reason: "partner answered 503"}
@@ -340,7 +345,7 @@ func TestQuoteFallsBackToLiveOnCacheMiss(t *testing.T) {
 
 	for _, p := range threePartners {
 		key := cache.Key("corretora-a", p.Name, request.Fingerprint())
-		if _, _, ok := quoteCache.Get(context.Background(), key); !ok {
+		if _, _, ok, _ := quoteCache.Get(context.Background(), key); !ok {
 			t.Errorf("no cache entry written for %q after a live success, expected Set to have run", p.Name)
 		}
 	}
@@ -516,7 +521,9 @@ func TestQuoteSkipsThePartnerWhenItsBreakerIsOpen(t *testing.T) {
 		if _, err := breaker.Execute(context.Background(), alwaysFails); err == nil {
 			t.Fatal("forcing the breaker open: expected an error from alwaysFails")
 		}
-		time.Sleep(30 * time.Millisecond) // past OpenTimeout: the breaker now allows exactly 1 half-open probe.
+		// gobreaker/v2 has no injectable clock: sleep past OpenTimeout so the breaker allows exactly 1
+		// half-open probe.
+		time.Sleep(30 * time.Millisecond)
 
 		started := make(chan struct{})
 		release := make(chan struct{})
@@ -560,13 +567,12 @@ func TestQuoteSkipsThePartnerWhenItsBreakerIsOpen(t *testing.T) {
 
 // newInMemoryTracer builds a *sdktrace.TracerProvider backed by an in-memory exporter, local to the
 // test, and returns both the exporter (to read the spans back) and a trace.Tracer to pass to
-// quotation.WithTracer. It deliberately does NOT call otel.SetTracerProvider: mutating the global
-// provider is not safe to rely on across repeated runs of the same test binary, because the OTel
-// SDK's global package only rewires an already-created Tracer to a new delegate once per process
-// (go.opentelemetry.io/otel/internal/global/state.go, delegateTraceOnce) — a second
-// otel.SetTracerProvider call in the same binary would silently leave any package-level
-// otel.Tracer(...) var pointed at the first provider. Injecting the Tracer via WithTracer avoids the
-// global entirely.
+// quotation.WithTracer. It deliberately never mutates the process-wide global tracer provider: doing
+// so is not safe to rely on across repeated runs of the same test binary, because the OTel SDK's
+// global package only rewires an already-created Tracer to a new delegate once per process
+// (go.opentelemetry.io/otel/internal/global/state.go, delegateTraceOnce) — a second call to replace
+// the global provider in the same binary would silently leave any package-level otel.Tracer(...) var
+// pointed at the first provider. Injecting the Tracer via WithTracer avoids the global entirely.
 func newInMemoryTracer(t *testing.T) (*tracetest.InMemoryExporter, trace.Tracer) {
 	t.Helper()
 	exporter := tracetest.NewInMemoryExporter()
@@ -593,6 +599,32 @@ func partnerQuoteResult(spans tracetest.SpanStubs, partnerName string) (string, 
 		}
 		if gotPartner == partnerName {
 			return result, true
+		}
+	}
+	return "", false
+}
+
+// partnerQuoteSpanAttribute finds the "partner.quote" span for partnerName (identified by the
+// "partner.name" attribute) and returns the value of its attrKey attribute.
+func partnerQuoteSpanAttribute(spans tracetest.SpanStubs, partnerName, attrKey string) (string, bool) {
+	for _, span := range spans {
+		if span.Name != "partner.quote" {
+			continue
+		}
+		var gotPartner string
+		var value string
+		var found bool
+		for _, kv := range span.Attributes {
+			switch string(kv.Key) {
+			case "partner.name":
+				gotPartner = kv.Value.AsString()
+			case attrKey:
+				value = kv.Value.AsString()
+				found = true
+			}
+		}
+		if gotPartner == partnerName {
+			return value, found
 		}
 	}
 	return "", false
@@ -638,6 +670,36 @@ func TestPartnerQuoteSpanCarriesResult(t *testing.T) {
 	}
 	if result, ok := partnerQuoteResult(spans, "partner-degrading"); !ok || result != "live_success" {
 		t.Fatalf("partner.result for partner-degrading = (%q, ok=%v), want (live_success, true)", result, ok)
+	}
+}
+
+// TestPartnerQuoteSpanCarriesCacheResult is the teste que prova required by T13 item 2 for the span
+// half of "registra cache_result... tanto no log quanto no span": the "partner.quote" span must carry
+// the exact three-way cache.QuoteCache.Get classification ("hit", "miss" or "redis_error") as its
+// "cache_result" attribute, not just whether the call ended up a cache_hit.
+func TestPartnerQuoteSpanCarriesCacheResult(t *testing.T) {
+	exporter, tracer := newInMemoryTracer(t)
+
+	_, quoteCache := newTestCache(t, time.Minute)
+	request := validRequest()
+	cached := partner.Quote{Partner: "partner-slow", QuoteID: "cached-slow", PremiumCents: 91234, Currency: "BRL"}
+	key := cache.Key("corretora-a", "partner-slow", request.Fingerprint())
+	if err := quoteCache.Set(context.Background(), key, cached); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	if _, err := NewService(threePartners, quoter, quoteCache, nil, WithTracer(tracer)).
+		Quote(context.Background(), "corretora-a", request); err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+
+	spans := exporter.GetSpans()
+	if result, ok := partnerQuoteSpanAttribute(spans, "partner-slow", "cache_result"); !ok || result != "hit" {
+		t.Fatalf("cache_result for partner-slow = (%q, ok=%v), want (hit, true)", result, ok)
+	}
+	if result, ok := partnerQuoteSpanAttribute(spans, "partner-flaky", "cache_result"); !ok || result != "miss" {
+		t.Fatalf("cache_result for partner-flaky = (%q, ok=%v), want (miss, true)", result, ok)
 	}
 }
 
@@ -691,5 +753,38 @@ func TestPartnerQuoteLogHasNoPersonalData(t *testing.T) {
 		if strings.Contains(logOutput, needle) {
 			t.Fatalf("log output contains forbidden value %q:\n%s", needle, logOutput)
 		}
+	}
+}
+
+// TestPartnerQuoteLogHasCacheResultForRedisError is the teste que prova required by T13 item 2: the
+// per-partner log line's cache_result must carry the exact three-way value classified by
+// cache.QuoteCache.Get ("hit", "miss" or "redis_error"), not just whether the lookup was a hit. Redis
+// being unreachable is deliberately different from an ordinary cold-cache miss, so this test forces
+// that outcome (closing the miniredis server before the call) and asserts on cache_result=redis_error
+// specifically, instead of accepting a plain "miss" for both cases.
+func TestPartnerQuoteLogHasCacheResultForRedisError(t *testing.T) {
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	server, quoteCache := newTestCache(t, time.Minute)
+	server.Close() // Redis unreachable before the very first call: Get must report redis_error.
+
+	quoter := &fakeQuoter{premiums: defaultPremiums()}
+	if _, err := NewService(threePartners, quoter, quoteCache, nil).
+		Quote(context.Background(), "corretora-a", validRequest()); err != nil {
+		t.Fatalf("Quote: %v", err)
+	}
+
+	logOutput := buf.String()
+	if logOutput == "" {
+		t.Fatal("no log output captured; the per-partner log line is not being written")
+	}
+	if !strings.Contains(logOutput, "cache_result=redis_error") {
+		t.Fatalf("log output missing cache_result=redis_error:\n%s", logOutput)
+	}
+	if strings.Contains(logOutput, "cache_result=miss") {
+		t.Fatalf("log output has cache_result=miss instead of redis_error (Redis is unreachable, not merely empty):\n%s", logOutput)
 	}
 }

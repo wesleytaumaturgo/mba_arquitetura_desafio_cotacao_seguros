@@ -76,9 +76,12 @@ func TestSetThenGetRoundTrips(t *testing.T) {
 	}
 	after := time.Now()
 
-	got, storedAt, ok := c.Get(ctx, key)
+	got, storedAt, ok, result := c.Get(ctx, key)
 	if !ok {
 		t.Fatalf("Get() ok = false, want true")
+	}
+	if result != "hit" {
+		t.Fatalf("Get() result = %q, want %q", result, "hit")
 	}
 	if got != quote {
 		t.Fatalf("Get() quote = %+v, want %+v", got, quote)
@@ -96,9 +99,12 @@ func TestGetMissesWhenTheKeyDoesNotExistOrExpired(t *testing.T) {
 		c := NewQuoteCache(client, time.Minute)
 		key := Key("corretora-a", "partner-flaky", "never-written")
 
-		_, _, ok := c.Get(ctx, key)
+		_, _, ok, result := c.Get(ctx, key)
 		if ok {
 			t.Fatalf("Get() ok = true, want false for a key never written")
+		}
+		if result != "miss" {
+			t.Fatalf("Get() result = %q, want %q for a key never written", result, "miss")
 		}
 	})
 
@@ -116,9 +122,12 @@ func TestGetMissesWhenTheKeyDoesNotExistOrExpired(t *testing.T) {
 		// real wall-clock time, so we advance its fake clock past ttl instead of sleeping the test.
 		server.FastForward(ttl + 10*time.Millisecond)
 
-		_, _, ok := c.Get(ctx, key)
+		_, _, ok, result := c.Get(ctx, key)
 		if ok {
 			t.Fatalf("Get() ok = true, want false after TTL expired")
+		}
+		if result != "miss" {
+			t.Fatalf("Get() result = %q, want %q after TTL expired", result, "miss")
 		}
 	})
 }
@@ -152,9 +161,12 @@ func TestGetIsBestEffortWhenRedisIsUnreachable(t *testing.T) {
 		t.Fatalf("Set() error = nil, want a non-nil error when redis is unreachable")
 	}
 
-	_, _, ok := c.Get(ctx, key)
+	_, _, ok, result := c.Get(ctx, key)
 	if ok {
 		t.Fatalf("Get() ok = true, want false when redis is unreachable")
+	}
+	if result != "redis_error" {
+		t.Fatalf("Get() result = %q, want %q when redis is unreachable", result, "redis_error")
 	}
 }
 
@@ -257,10 +269,10 @@ func TestCacheResultCounterIncrements(t *testing.T) {
 	if err := c.Set(ctx, key, quote); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
-	if _, _, ok := c.Get(ctx, key); !ok {
+	if _, _, ok, _ := c.Get(ctx, key); !ok {
 		t.Fatalf("Get() ok = false, want true right after Set")
 	}
-	if _, _, ok := c.Get(ctx, Key("corretora-a", "partner-flaky", "never-written")); ok {
+	if _, _, ok, _ := c.Get(ctx, Key("corretora-a", "partner-flaky", "never-written")); ok {
 		t.Fatalf("Get() ok = true, want false for a key never written")
 	}
 
@@ -280,8 +292,8 @@ func TestCacheResultCounterIncrements(t *testing.T) {
 	if err := c.Set(ctx, key, quote); err == nil {
 		t.Fatal("Set() error = nil, want a non-nil error once redis is closed")
 	}
-	if _, _, ok := c.Get(ctx, key); ok {
-		t.Fatalf("Get() ok = true, want false once redis is closed")
+	if _, _, ok, result := c.Get(ctx, key); ok || result != "redis_error" {
+		t.Fatalf("Get() = (ok=%v, result=%q), want (false, redis_error) once redis is closed", ok, result)
 	}
 
 	counts = cacheResultCounts(t, reader)

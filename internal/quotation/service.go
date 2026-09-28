@@ -108,8 +108,11 @@ func (s *Service) Quote(ctx context.Context, tenant string, request Request) (Re
 // It also produces the T09b business telemetry for this one partner (FDD seção 7): a "partner.quote"
 // span carrying the "partner.result" attribute (so a circuit-shortened call says so in the trace,
 // instead of looking like a mysteriously fast live quote) and a structured log line with tenant_id,
-// partner, source, breaker_state, elapsed_ms and cache_result. Neither ever carries the driver's
-// document, the vehicle's plate/model/year or a quote_id.
+// partner, source, breaker_state, elapsed_ms and cache_result. Both the span and the log line's
+// cache_result carry the exact three-way value cache.QuoteCache.Get itself classified the lookup as
+// ("hit", "miss" or "redis_error", T13): a cache miss caused by Redis actually being unreachable is
+// never confused with an ordinary cold-cache miss. Neither ever carries the driver's document, the
+// vehicle's plate/model/year or a quote_id.
 func (s *Service) quoteForPartner(
 	ctx context.Context, tenant string, p platform.Partner, forPartner partnerRequest, fingerprint string,
 ) (partner.Quote, error) {
@@ -120,22 +123,24 @@ func (s *Service) quoteForPartner(
 
 	key := s.cacheKey(tenant, p.Name, fingerprint)
 
-	if quote, ok := s.fromCache(ctx, key); ok {
+	quote, hit, cacheResult := s.fromCache(ctx, key)
+	span.SetAttributes(attribute.String("cache_result", cacheResult))
+	if hit {
 		span.SetAttributes(attribute.String("partner.result", "cache_hit"))
-		s.logPartnerOutcome(tenant, p.Name, quote.Source, "hit", start, nil)
+		s.logPartnerOutcome(tenant, p.Name, quote.Source, cacheResult, start, nil)
 		return quote, nil
 	}
 
 	quote, err := s.callQuoter(ctx, p, forPartner)
 	span.SetAttributes(attribute.String("partner.result", classifyPartnerResult(err)))
 	if err != nil {
-		s.logPartnerOutcome(tenant, p.Name, "", "miss", start, err)
+		s.logPartnerOutcome(tenant, p.Name, "", cacheResult, start, err)
 		return partner.Quote{}, err
 	}
 	quote.Source = "live"
 
 	s.store(ctx, key, quote)
-	s.logPartnerOutcome(tenant, p.Name, quote.Source, "miss", start, nil)
+	s.logPartnerOutcome(tenant, p.Name, quote.Source, cacheResult, start, nil)
 	return quote, nil
 }
 
@@ -218,20 +223,24 @@ func (s *Service) cacheKey(tenant, partnerName, fingerprint string) string {
 	return cache.Key(tenant, partnerName, fingerprint)
 }
 
-func (s *Service) fromCache(ctx context.Context, key string) (partner.Quote, bool) {
+// fromCache reports the cache lookup outcome for key: the quote (when hit is true), whether it was a
+// hit, and the exact three-way result cache.QuoteCache.Get classified it as ("hit", "miss" or
+// "redis_error", T13). No cache configured (or an empty key, meaning cache-aside is skipped for this
+// call) is reported as "miss": there was never a Redis round trip to fail.
+func (s *Service) fromCache(ctx context.Context, key string) (partner.Quote, bool, string) {
 	if s.cache == nil || key == "" {
-		return partner.Quote{}, false
+		return partner.Quote{}, false, "miss"
 	}
 
-	quote, storedAt, ok := s.cache.Get(ctx, key)
+	quote, storedAt, ok, result := s.cache.Get(ctx, key)
 	if !ok {
-		return partner.Quote{}, false
+		return partner.Quote{}, false, result
 	}
 
 	age := int64(time.Since(storedAt).Seconds())
 	quote.Source = "cache"
 	quote.AgeSeconds = &age
-	return quote, true
+	return quote, true, result
 }
 
 func (s *Service) store(ctx context.Context, key string, quote partner.Quote) {

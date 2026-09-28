@@ -110,26 +110,30 @@ func (c *QuoteCache) Set(ctx context.Context, key string, quote partner.Quote) e
 }
 
 // Get reads and deserializes the entry stored under key. Any failure (missing key, invalid JSON,
-// Redis unreachable) is logged and reported as ok == false; the caller never sees the error.
-func (c *QuoteCache) Get(ctx context.Context, key string) (quote partner.Quote, storedAt time.Time, ok bool) {
+// Redis unreachable) is logged and reported as ok == false; the caller never sees the error. result
+// additionally reports which of the three outcomes counted by quotation_cache_result_total happened
+// ("hit", "miss" or "redis_error"), so a caller that wants that distinction (T13, e.g. the
+// per-partner log line and the "partner.quote" span in internal/quotation/service.go) does not have
+// to duplicate the classification: ok alone collapses "miss" and "redis_error" into the same false.
+func (c *QuoteCache) Get(ctx context.Context, key string) (quote partner.Quote, storedAt time.Time, ok bool, result string) {
 	raw, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
 			c.recordResult(ctx, "miss")
-			return partner.Quote{}, time.Time{}, false
+			return partner.Quote{}, time.Time{}, false, "miss"
 		}
 		log.Printf("cache: get key %q failed: %v", key, err)
 		c.recordResult(ctx, "redis_error")
-		return partner.Quote{}, time.Time{}, false
+		return partner.Quote{}, time.Time{}, false, "redis_error"
 	}
 
 	var e entry
 	if err := json.Unmarshal(raw, &e); err != nil {
 		log.Printf("cache: unmarshal key %q failed: %v", key, err)
 		c.recordResult(ctx, "redis_error")
-		return partner.Quote{}, time.Time{}, false
+		return partner.Quote{}, time.Time{}, false, "redis_error"
 	}
 
 	c.recordResult(ctx, "hit")
-	return e.Quote, e.StoredAt, true
+	return e.Quote, e.StoredAt, true, "hit"
 }

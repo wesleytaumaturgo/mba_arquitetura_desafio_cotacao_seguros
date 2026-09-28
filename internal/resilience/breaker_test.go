@@ -16,18 +16,49 @@ import (
 	"github.com/GuilhermeOliveira591/mba_arquitetura_desafio_cotacao_seguros/internal/platform"
 )
 
+// scriptedBurstLength and scriptedBurstFailures describe a fixed 60-call response script for
+// TestBreakerOpensAfterFiveConsecutiveFailures: calls 1-48 succeed, calls 49-57 fail (a run of 9
+// consecutive 503s), and calls 58-60 succeed again. The 49-57 window is not arbitrary: replaying the
+// real deterministic generator behind cmd/partner-mock (Behavior.Admit, Seed=20260729,
+// FailureRate=0.4 — the same values as partner-flaky in docker-compose) for its first ~500 calls
+// shows that positions 49-57 are, in fact, the longest run of consecutive failures it produces.
+// The 1-48 prefix, however, is fabricated as "calm" (pure success) to isolate the trip/short-circuit
+// proof below; it is NOT a faithful, contiguous replay of the real trace. Replaying the real
+// generator over 1-60 in full shows a separate run of exactly 5 consecutive failures at 38-42, which
+// would trip a ConsecutiveFailures:5 breaker before ever reaching the 49-57 window used here. The
+// script only needs to be exercised up to the 54th call (the short-circuit assertion), but its full
+// length is declared here so the failing window (49-57) reads the same way it would in a
+// mostly-healthy 60-request trace.
+const scriptedBurstLength = 60
+
+// scriptedBurstFails reports whether the (1-based) call number n fails in the fixed 60-call script
+// (see the comment above scriptedBurstLength for what is and isn't faithfully reproduced from the
+// real partner-mock generator).
+func scriptedBurstFails(n int32) bool {
+	return n >= 49 && n <= 57
+}
+
 // TestBreakerOpensAfterFiveConsecutiveFailures is the deterministic breaker test required by the
-// assignment (FDD seção 9). It uses a fixed response script on an httptest.Server, mirroring the shape
-// of the real partner-flaky burst (a run of consecutive 503s), without importing cmd/partner-mock. It
-// stops at the short-circuit assertion, on purpose: this is the test the FDD/plano call "determinístico",
-// so it never needs time.Sleep (see TestBreakerHalfOpenProbesReopenAndClose for the half-open dance,
-// which does).
+// assignment (FDD seção 9). It replays a fixed 60-response script (a fabricated calm prefix at 1-48
+// and 58-60, failures at 49-57 — the real longest failure run the partner-flaky mock generator
+// produces; see the comment above scriptedBurstLength for exactly what is and isn't a faithful replay
+// of the real trace) against an httptest.Server, without importing cmd/partner-mock, and proves the
+// breaker opens exactly on the 53rd call (the 5th consecutive failure inside the 49-57 run) and
+// short-circuits the 54th, never reaching the server. It stops at the short-circuit assertion, on
+// purpose: this is the test the FDD/plano call "determinístico", so it never blocks on a timer (see
+// TestBreakerHalfOpenProbesReopenAndClose for the half-open dance, which does).
 func TestBreakerOpensAfterFiveConsecutiveFailures(t *testing.T) {
 	var requests int32
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		atomic.AddInt32(&requests, 1)
-		http.Error(w, `{"error":"partner unavailable"}`, http.StatusServiceUnavailable)
+		n := atomic.AddInt32(&requests, 1)
+		if scriptedBurstFails(n) {
+			http.Error(w, `{"error":"partner unavailable"}`, http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"partner":"ignored","quote_id":"q-1","premium_cents":123456,` +
+			`"currency":"BRL","coverage_cents":5000000,"valid_for_seconds":300}`))
 	}))
 	defer server.Close()
 
@@ -44,25 +75,43 @@ func TestBreakerOpensAfterFiveConsecutiveFailures(t *testing.T) {
 		HalfOpenMaxRequests: 2,
 	})
 
-	// 5 consecutive failures trip the breaker open.
-	for i := 1; i <= 5; i++ {
-		if _, err := breaker.Execute(ctx, fn); err == nil {
-			t.Fatalf("call %d: expected failure from the partner, got success", i)
+	// Calls 1-52: the fabricated calm prefix (1-48, pure success) plus the first four calls of the
+	// 49-57 failure run (none reaching 5 consecutive yet), so the breaker stays closed and every call
+	// reaches the server.
+	for i := int32(1); i <= 52; i++ {
+		_, err := breaker.Execute(ctx, fn)
+		if wantErr := scriptedBurstFails(i); wantErr && err == nil {
+			t.Fatalf("call %d: expected the scripted failure, got success", i)
+		} else if !wantErr && err != nil {
+			t.Fatalf("call %d: expected success, got %v", i, err)
+		}
+		if state := breaker.State(); state != gobreaker.StateClosed {
+			t.Fatalf("State() after call %d = %v, want StateClosed (breaker must not open before the 5th consecutive failure)", i, state)
 		}
 	}
-	if got := atomic.LoadInt32(&requests); got != 5 {
-		t.Fatalf("server received %d requests, want 5 before the breaker opens", got)
-	}
-	if state := breaker.State(); state != gobreaker.StateOpen {
-		t.Fatalf("State() = %v, want StateOpen right after the 5th consecutive failure", state)
+	if got := atomic.LoadInt32(&requests); got != 52 {
+		t.Fatalf("server received %d requests, want 52 before the tripping call", got)
 	}
 
-	// A 6th call while the breaker is open must be rejected without reaching the server.
+	// Call 53 is the 5th consecutive failure inside the 49-57 burst (49, 50, 51, 52, 53): it trips the
+	// breaker open.
 	if _, err := breaker.Execute(ctx, fn); err == nil {
-		t.Fatal("call while breaker is open: expected an error")
+		t.Fatal("call 53: expected the scripted failure from the partner, got success")
 	}
-	if got := atomic.LoadInt32(&requests); got != 5 {
-		t.Fatalf("server received %d requests, want 5: the 6th call must be short-circuited", got)
+	if got := atomic.LoadInt32(&requests); got != 53 {
+		t.Fatalf("server received %d requests, want 53 after the tripping call", got)
+	}
+	if state := breaker.State(); state != gobreaker.StateOpen {
+		t.Fatalf("State() = %v, want StateOpen right after the 53rd call (5th consecutive failure)", state)
+	}
+
+	// Call 54 must be short-circuited: rejected by the open breaker without ever reaching the server,
+	// even though the script would have failed it anyway.
+	if _, err := breaker.Execute(ctx, fn); err == nil {
+		t.Fatal("call 54: expected an error from the open breaker")
+	}
+	if got := atomic.LoadInt32(&requests); got != 53 {
+		t.Fatalf("server received %d requests, want 53: the 54th call must be short-circuited", got)
 	}
 }
 
@@ -118,8 +167,8 @@ func TestBreakerHalfOpenProbesReopenAndClose(t *testing.T) {
 		t.Fatalf("State() = %v, want StateOpen right after the 5th consecutive failure", state)
 	}
 
-	// After OpenTimeout, the breaker allows one probe (half-open). The script makes it fail, so the
-	// breaker must reopen immediately.
+	// gobreaker/v2 has no injectable clock: after OpenTimeout, the breaker allows one probe (half-open).
+	// The script makes it fail, so the breaker must reopen immediately.
 	time.Sleep(openTimeout + 20*time.Millisecond)
 	if _, err := breaker.Execute(ctx, fn); err == nil {
 		t.Fatal("half-open probe: expected the scripted failure to be returned")
@@ -131,8 +180,8 @@ func TestBreakerHalfOpenProbesReopenAndClose(t *testing.T) {
 		t.Fatalf("State() = %v, want StateOpen: a half-open failure must reopen the circuit immediately", state)
 	}
 
-	// After OpenTimeout again, two successful half-open probes (HalfOpenMaxRequests: 2) close the
-	// circuit.
+	// gobreaker/v2 has no injectable clock: after OpenTimeout again, two successful half-open probes
+	// (HalfOpenMaxRequests: 2) close the circuit.
 	time.Sleep(openTimeout + 20*time.Millisecond)
 	if _, err := breaker.Execute(ctx, fn); err != nil {
 		t.Fatalf("half-open probe 1: expected success, got %v", err)

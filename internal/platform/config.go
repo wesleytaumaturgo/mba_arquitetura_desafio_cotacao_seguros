@@ -2,6 +2,7 @@ package platform
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -106,7 +107,11 @@ func parseResilience(env func(string) string, cfg *Config) error {
 	}
 	cfg.Breaker.HalfOpenMaxRequests = halfOpenMaxRequests
 
-	cfg.RedisAddr = text(env, "REDIS_ADDR", defaultRedisAddr)
+	redisAddr := text(env, "REDIS_ADDR", defaultRedisAddr)
+	if _, _, err := net.SplitHostPort(redisAddr); err != nil {
+		return fmt.Errorf("REDIS_ADDR: %q must be in host:port format: %v", redisAddr, err)
+	}
+	cfg.RedisAddr = redisAddr
 	return nil
 }
 

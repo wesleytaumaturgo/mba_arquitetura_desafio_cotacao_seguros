@@ -179,6 +179,8 @@ func TestInvalidConfigFails(t *testing.T) {
 		"BREAKER_CONSECUTIVE_FAILURES is not a number":   {"BREAKER_CONSECUTIVE_FAILURES": "five"},
 		"BREAKER_OPEN_SECONDS is not a number":           {"BREAKER_OPEN_SECONDS": "-5"},
 		"BREAKER_HALF_OPEN_MAX_REQUESTS is not a number": {"BREAKER_HALF_OPEN_MAX_REQUESTS": "two"},
+		"REDIS_ADDR without a port":                      {"REDIS_ADDR": "redis-only-host"},
+		"REDIS_ADDR with a scheme instead of host:port":  {"REDIS_ADDR": "redis://redis:6379"},
 	}
 
 	for name, vars := range cases {
